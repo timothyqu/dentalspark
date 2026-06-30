@@ -166,6 +166,7 @@ input,textarea,select{font-family:inherit}
 .rb-sign .box img{position:absolute;inset:20px 8px 8px;max-height:60px;object-fit:contain}
 
 .empty{text-align:center;color:var(--subtle);padding:50px 20px}
+.bk-banner{margin:0;padding:12px 22px;background:linear-gradient(90deg,#FFF7E6,#FDEFD3);border-bottom:1px solid #F6C343;color:#7a5a12;font-size:14px}
 .empty svg{width:40px;height:40px;opacity:.5;margin-bottom:10px}
 
 /* viewer */
@@ -215,8 +216,11 @@ input,textarea,select{font-family:inherit}
       <input id="searchInput" placeholder="搜索患者 / 病例 / 分类" oninput="renderCases()">
     </div>
     <button class="btn btn-primary" onclick="openNewCase()">＋ 快速新建</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportBackup()">导出备份</button>
+    <button class="btn btn-ghost btn-sm" onclick="importBackup()">导入备份</button>
     <button class="btn btn-ghost btn-sm" onclick="resetDemo()">重置演示</button>
   </div>
+  <div id="backupBanner" class="bk-banner hidden"></div>
   <div class="cc-wrap">
     <div class="filters" id="filters"></div>
     <div id="caseList"></div>
@@ -389,6 +393,76 @@ const CAT_COLOR={comprehensive:'--blue',implant:'--purple',aesthetic:'--rose',or
 const STATUS={inProgress:['进行中','--gray'],communicated:['已沟通','--blue'],delivered:['已交付','--green']};
 let uid=1; const nid=()=>'id'+(uid++);
 
+/* ============ 持久化存储：IndexedDB（升级/刷新不丢数据） ============ */
+const DB_NAME='dentalspark',DB_VER=1;let _db=null,_persistT=null,_storageOK=true;
+function idb(){return new Promise((res,rej)=>{if(_db)return res(_db);
+  let r;try{r=indexedDB.open(DB_NAME,DB_VER);}catch(e){return rej(e);}
+  r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('app'))db.createObjectStore('app');if(!db.objectStoreNames.contains('blobs'))db.createObjectStore('blobs');};
+  r.onsuccess=()=>{_db=r.result;res(_db);};r.onerror=()=>rej(r.error);});}
+function idbGet(store,key){return idb().then(db=>new Promise((res,rej)=>{const q=db.transaction(store).objectStore(store).get(key);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
+function idbSet(store,key,val){return idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).put(val,key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}));}
+function idbDel(store,key){return idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}));}
+function idbClearAll(){return idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(['app','blobs'],'readwrite');tx.objectStore('app').clear();tx.objectStore('blobs').clear();tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}));}
+function putBlob(key,dataUrl){return idbSet('blobs',key,dataUrl).catch(()=>{_storageOK=false;});}
+function metaCopy(){return cases.map(c=>({...c,
+  assets:(c.assets||[]).map(a=>{const m={...a};m._hasSrc=!!a.src;m._hasAnno=!!a.annotated;
+    delete m.src;delete m.annotated;delete m._dispW;delete m._dispH;return m;})}));}
+function persistNow(){if(!_storageOK)return Promise.resolve();
+  return idbSet('app','state',{uid,cases:metaCopy(),savedAt:Date.now()}).catch(()=>{_storageOK=false;});}
+function schedulePersist(){clearTimeout(_persistT);_persistT=setTimeout(persistNow,400);}
+async function loadFromStore(){let st;try{st=await idbGet('app','state');}catch(e){return false;}
+  if(!st||!st.cases)return false;cases=st.cases;if(st.uid)uid=st.uid;
+  for(const c of cases){for(const a of (c.assets||[])){
+    try{if(a._hasSrc){const s=await idbGet('blobs','src_'+a.id);if(s)a.src=s;}
+        if(a._hasAnno){const n=await idbGet('blobs','anno_'+a.id);if(n)a.annotated=n;}}catch(e){}}}
+  return true;}
+async function boot(){try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch(e){}
+  let ok=false;try{ok=await loadFromStore();}catch(e){ok=false;}
+  if(!ok){cases=seed();try{await persistNow();}catch(e){}}}
+
+/* 备份导出 / 导入（兜底：换仓库、换设备也能恢复） */
+function exportBackup(){const data={app:'DentalSpark',version:1,exportedAt:Date.now(),uid,cases};
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='dentalspark_备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  markBackupDone();}
+
+/* 自动备份提醒 */
+function getBackupMeta(){return idbGet('app','backupMeta').then(m=>m||{}).catch(()=>({}));}
+function setBackupMeta(m){return idbSet('app','backupMeta',m).catch(()=>{});}
+async function markBackupDone(){const m=await getBackupMeta();m.lastBackupAt=Date.now();m.snoozeUntil=0;await setBackupMeta(m);hideBackupBanner();}
+function hideBackupBanner(){const el=document.getElementById('backupBanner');if(el)el.classList.add('hidden');}
+async function snoozeBackup(days){const m=await getBackupMeta();m.snoozeUntil=Date.now()+days*86400000;await setBackupMeta(m);hideBackupBanner();}
+async function maybeShowBackupReminder(){
+  const m=await getBackupMeta();const now=Date.now();const days=m.remindDays||7;
+  if(!m.lastBackupAt){m.lastBackupAt=now;await setBackupMeta(m);return;}
+  if(m.snoozeUntil&&now<m.snoozeUntil)return;
+  if(now-m.lastBackupAt < days*86400000)return;
+  const el=document.getElementById('backupBanner');if(!el)return;
+  const d=Math.floor((now-m.lastBackupAt)/86400000);
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span>🛟 已有 <b>${d}</b> 天未导出备份。为防止设备清理或换机丢失数据，建议现在导出一份保存到本地。</span>
+    <span style="flex:1"></span>
+    <button class="btn btn-primary btn-sm" onclick="exportBackup()">立即导出备份</button>
+    <button class="btn btn-secondary btn-sm" onclick="snoozeBackup(7)">7 天后提醒</button>
+    <button class="btn btn-ghost btn-sm" onclick="snoozeBackup(30)">本月不提醒</button>
+  </div>`;
+  el.classList.remove('hidden');}
+function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='application/json,.json';
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=async()=>{try{const d=JSON.parse(rd.result);if(!d.cases)throw 0;
+      if(!confirm('导入将覆盖当前全部数据，确定继续？')){return;}
+      cases=d.cases;uid=d.uid||uid;
+      // 写回图片字节到 blobs
+      for(const c of cases){for(const a of (c.assets||[])){
+        if(a.src)await putBlob('src_'+a.id,a.src);if(a.annotated)await putBlob('anno_'+a.id,a.annotated);}}
+      await persistNow();markBackupDone();alert('导入成功。');renderCases();
+    }catch(e){alert('导入失败：文件格式不对。');}};
+    rd.readAsText(f);};
+  inp.click();}
+
+
 function seed(){
   return [
     {id:nid(),name:'张伟',gender:'男',age:42,phone:'13812345678',recordNo:'MR-20250601-001',chiefComplaint:'右下后牙咬物不适',history:'否认高血压、糖尿病及药物过敏史。',category:'comprehensive',status:'inProgress',updated:Date.now()-3600e3,
@@ -451,8 +525,9 @@ function renderRail(){document.getElementById('rail').innerHTML=TABS.map(t=>
 function setTab(t){tab=t;renderRail();renderWB();}
 function setView(v){view=v;document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));renderWB();}
 function flashSave(){const d=document.getElementById('saveDot'),t=document.getElementById('saveTxt');
-  d.style.color='var(--amber)';t.textContent='保存中…';
-  setTimeout(()=>{d.style.color='var(--green)';t.textContent='已保存';},350);}
+  if(d&&t){d.style.color='var(--amber)';t.textContent='保存中…';
+  setTimeout(()=>{d.style.color='var(--green)';t.textContent=_storageOK?'已保存':'未持久化';},350);}
+  schedulePersist();}
 
 function renderWB(){
   renderTimelineBar();
@@ -654,15 +729,19 @@ function mediaPanelHTML(){
      <input id="fileInput" type="file" accept="image/*" class="hidden">`;}
 function importPhoto(source){
   const inp=document.getElementById('fileInput');inp.value='';
-  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const url=URL.createObjectURL(file);
-    cur.assets.push({id:nid(),src:url,kind:'photo',source,caption:SOURCE_CAP[source],includeInReport:true});flashSave();renderWB();};
+  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const rd=new FileReader();
+    rd.onload=()=>{const url=rd.result;const a={id:nid(),src:url,kind:'photo',source,caption:SOURCE_CAP[source],includeInReport:true};
+      cur.assets.push(a);putBlob('src_'+a.id,url);flashSave();renderWB();};
+    rd.readAsDataURL(file);};
   inp.click();}
 function importRadio(type){
   const inp=document.getElementById('fileInput');inp.value='';
-  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const url=URL.createObjectURL(file);
-    const a={id:nid(),src:url,kind:'radio',radioType:type,date:Date.now(),caption:RADIO_CAP,includeInReport:true,toothRegion:'',
-      adjust:{bri:100,con:100,inv:0,gray:0,rot:0},annos:[],measures:[],calib:null,annotated:null};
-    cur.assets.push(a);flashSave();renderWB();openViewer(a.id);};
+  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const rd=new FileReader();
+    rd.onload=()=>{const url=rd.result;
+      const a={id:nid(),src:url,kind:'radio',radioType:type,date:Date.now(),caption:RADIO_CAP,includeInReport:true,toothRegion:'',
+        adjust:{bri:100,con:100,inv:0,gray:0,rot:0},annos:[],measures:[],calib:null,annotated:null};
+      cur.assets.push(a);putBlob('src_'+a.id,url);flashSave();renderWB();openViewer(a.id);};
+    rd.readAsDataURL(file);};
   inp.click();}
 
 /* ===== 阅片器 ===== */
@@ -790,7 +869,7 @@ function bakeAsset(a){return new Promise(res=>{
       else{ctx.beginPath();ctx.moveTo(m.a.x*sx,m.a.y*sy);ctx.lineTo(m.b.x*sx,m.b.y*sy);ctx.stroke();
         const dl=Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y);ctx.fillText(lenLabelBake(a,dl,nw),(m.a.x+m.b.x)/2*sx+4,(m.a.y+m.b.y)/2*sy-4);}});
     ctx.restore();
-    a.annotated=cv.toDataURL('image/jpeg',0.85);res();};
+    a.annotated=cv.toDataURL('image/jpeg',0.85);putBlob('anno_'+a.id,a.annotated);res();};
   img.src=a.src;});}
 
 /* ===== 同名牙位多时间点对比 ===== */
@@ -838,7 +917,7 @@ function dvReceive(dataUrl,pname){
   const a={id:nid(),src:dataUrl,kind:'radio',radioType:'cbct',date:Date.now(),
     caption:'这是从 DentaView 调入的 CBCT 影像，红色为医生标注。',includeInReport:true,toothRegion:'',
     adjust:{bri:100,con:100,inv:0,gray:0,rot:0},annos:[],measures:[],calib:null,annotated:null};
-  cur.assets.push(a);flashSave();
+  cur.assets.push(a);putBlob('src_'+a.id,dataUrl);flashSave();
   tab='media';mediaMode='radio';renderRail();renderWB();
   try{window.focus();}catch(e){}
   openViewer(a.id);
@@ -911,7 +990,7 @@ function createCase(){const name=document.getElementById('ncName').value.trim()|
     phone:document.getElementById('ncPhone').value.trim(),recordNo:document.getElementById('ncRec').value.trim()||genRecordNo(),
     chiefComplaint:'',history:'',category:document.getElementById('ncCat').value,
     status:'inProgress',updated:Date.now(),findings:[],assets:[],comparisons:[],reports:[],plan:[]};
-  cases.unshift(c);closeModal();renderCases();}
+  cases.unshift(c);closeModal();schedulePersist();renderCases();}
 
 /* finding editor */
 let editId=null;
@@ -980,7 +1059,8 @@ function editAsset(id){const a=cur.assets.find(x=>x.id===id);
      <button class="btn btn-primary btn-sm" onclick="saveAsset('${id}')">保存</button></div>`);}
 function saveAsset(id){const a=cur.assets.find(x=>x.id===id);a.caption=document.getElementById('aCap').value;
   a.includeInReport=document.getElementById('aInc').checked;flashSave();closeModal();renderWB();}
-function delAsset(id){cur.assets=cur.assets.filter(x=>x.id!==id);cur.comparisons=cur.comparisons.filter(p=>p.before!==id&&p.after!==id);flashSave();closeModal();renderWB();}
+function delAsset(id){cur.assets=cur.assets.filter(x=>x.id!==id);cur.comparisons=cur.comparisons.filter(p=>p.before!==id&&p.after!==id);
+  idbDel('blobs','src_'+id).catch(()=>{});idbDel('blobs','anno_'+id).catch(()=>{});flashSave();closeModal();renderWB();}
 
 /* new comparison */
 function newCompare(){let before=cur.assets[0].id,after=cur.assets[1].id,sim=false,title='术前 / 术后对比',cap='';
@@ -1089,9 +1169,12 @@ function showReportDoc(id){const r=cur.reports.find(x=>x.id===id);
 function printReport(){window.print();}
 
 /* ============ init ============ */
-function unlock(){document.getElementById('lock').classList.add('hidden');
-  document.getElementById('caseCenter').classList.remove('hidden');renderFilters();renderCases();}
-function resetDemo(){cases=seed();uid=1000;renderCases();}
+async function unlock(){document.getElementById('lock').classList.add('hidden');
+  document.getElementById('caseCenter').classList.remove('hidden');
+  renderFilters();renderCases();
+  await boot();renderFilters();renderCases();maybeShowBackupReminder();}
+async function resetDemo(){if(!confirm('重置演示会清空当前全部数据并恢复示例，确定？'))return;
+  try{await idbClearAll();}catch(e){}cases=seed();uid=1000;try{await persistNow();}catch(e){}renderCases();}
 document.getElementById('langSel').addEventListener('change',renderWB);
 if('serviceWorker' in navigator){
   let _swReloaded=false;

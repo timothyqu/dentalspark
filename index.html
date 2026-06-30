@@ -1093,7 +1093,19 @@ function unlock(){document.getElementById('lock').classList.add('hidden');
   document.getElementById('caseCenter').classList.remove('hidden');renderFilters();renderCases();}
 function resetDemo(){cases=seed();uid=1000;renderCases();}
 document.getElementById('langSel').addEventListener('change',renderWB);
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+if('serviceWorker' in navigator){
+  let _swReloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(_swReloaded)return;_swReloaded=true;location.reload();});
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update();
+      reg.addEventListener('updatefound',()=>{const nw=reg.installing;
+        nw&&nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){try{nw.postMessage('skipWaiting');}catch(e){}}
+        });});
+    }).catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>

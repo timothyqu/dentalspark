@@ -58,6 +58,11 @@ input,textarea,select{font-family:inherit}
 #lock h2{font-size:18px;margin:6px 0 0;font-weight:600;opacity:.9}
 #lock p{font-size:13px;opacity:.78;margin:18px 0}
 #lock .btn-secondary{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}
+#lockBody p{font-size:14px;opacity:.85;margin:14px 0}
+#lockBody .lock-input{display:block;width:240px;max-width:80vw;margin:0 auto 12px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.12);color:#fff;font-size:18px;text-align:center;letter-spacing:3px;outline:none}
+#lockBody .lock-input::placeholder{color:rgba(255,255,255,.6);letter-spacing:normal;font-size:14px}
+#lockBody .btn{margin:4px}
 .scope-ic{width:56px;height:56px;margin-bottom:12px}
 
 /* ===== Case center ===== */
@@ -202,8 +207,7 @@ input,textarea,select{font-family:inherit}
     <svg class="scope-ic" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M5 3v6a7 7 0 0 0 14 0V3"/><circle cx="12" cy="15" r="6"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
     <h1>DentalSpark</h1>
     <h2>口腔椅旁沟通系统</h2>
-    <p>病例资料本地加密保存，请验证身份后进入。<br><span style="opacity:.7">（网页预览版 · 数据仅存于本次浏览，刷新即重置）</span></p>
-    <button class="btn btn-secondary" onclick="unlock()">使用 Face ID / 密码解锁</button>
+    <div id="lockBody"><p>正在载入…</p></div>
   </div>
 </div>
 
@@ -218,6 +222,7 @@ input,textarea,select{font-family:inherit}
     <button class="btn btn-primary" onclick="openNewCase()">＋ 快速新建</button>
     <button class="btn btn-ghost btn-sm" onclick="exportBackup()">导出备份</button>
     <button class="btn btn-ghost btn-sm" onclick="importBackup()">导入备份</button>
+    <button class="btn btn-ghost btn-sm" onclick="openSecurity()">🔒 锁定/安全</button>
     <button class="btn btn-ghost btn-sm" onclick="resetDemo()">重置演示</button>
   </div>
   <div id="backupBanner" class="bk-banner hidden"></div>
@@ -1169,13 +1174,101 @@ function showReportDoc(id){const r=cur.reports.find(x=>x.id===id);
 function printReport(){window.print();}
 
 /* ============ init ============ */
-async function unlock(){document.getElementById('lock').classList.add('hidden');
+/* ============ 解锁 / 安全 ============ */
+function getSec(){return idbGet('app','security').then(s=>s||{}).catch(()=>({}));}
+function setSec(s){return idbSet('app','security',s).catch(()=>{});}
+async function sha256Hex(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function b64uFromBuf(buf){let s=btoa(String.fromCharCode(...new Uint8Array(buf)));return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function bufFromB64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');const pad=s.length%4?4-(s.length%4):0;s+='='.repeat(pad);
+  const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
+async function faceIDSupported(){try{return !!(window.PublicKeyCredential&&location.protocol==='https:'&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+async function renderLock(){const sec=await getSec();const body=document.getElementById('lockBody');
+  const faceBtn=sec.webauthnEnabled?`<button class="btn btn-secondary" onclick="faceIDUnlock()">使用 Face ID 解锁</button>`:'';
+  if(!sec.pinHash){
+    body.innerHTML=`<p>首次使用，请设置解锁密码（≥4 位），用于保护本机病例数据。</p>
+      <input id="lockPin" type="password" inputmode="numeric" placeholder="设置解锁密码" class="lock-input" onkeydown="if(event.key==='Enter')setPinAndEnter()">
+      <button class="btn btn-secondary" onclick="setPinAndEnter()">设置并进入</button>`;
+  }else{
+    body.innerHTML=`<p>请输入解锁密码进入。</p>
+      <input id="lockPin" type="password" inputmode="numeric" placeholder="解锁密码" class="lock-input" onkeydown="if(event.key==='Enter')pinUnlock()">
+      <div><button class="btn btn-secondary" onclick="pinUnlock()">解锁</button>${faceBtn}</div>`;
+  }
+  const i=document.getElementById('lockPin');if(i)setTimeout(()=>i.focus(),50);}
+async function setPinAndEnter(){const pin=(document.getElementById('lockPin').value||'');if(pin.length<4){alert('密码至少 4 位。');return;}
+  const salt=b64uFromBuf(crypto.getRandomValues(new Uint8Array(16)));const h=await sha256Hex(salt+pin);
+  const sec=await getSec();sec.pinHash=h;sec.pinSalt=salt;await setSec(sec);
+  if(await faceIDSupported()&&confirm('是否启用 Face ID / Touch ID 快速解锁？（之后仍可用密码）'))await enableFaceID();
+  doUnlock();}
+async function pinUnlock(){const el=document.getElementById('lockPin');const pin=(el.value||'');const sec=await getSec();
+  const h=await sha256Hex((sec.pinSalt||'')+pin);
+  if(h===sec.pinHash)doUnlock();else{el.value='';el.placeholder='密码错误，请重试';el.style.borderColor='#EF5350';}}
+async function enableFaceID(){
+  if(!(await faceIDSupported())){alert('此设备/浏览器不支持平台生物识别，或未通过 https 访问。\nGitHub Pages（https）可用；本地 file:// 不可。');return false;}
+  try{const cred=await navigator.credentials.create({publicKey:{
+      challenge:crypto.getRandomValues(new Uint8Array(32)),
+      rp:{name:'DentalSpark',id:location.hostname},
+      user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'dentalspark',displayName:'DentalSpark'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+      timeout:60000,attestation:'none'}});
+    const sec=await getSec();sec.webauthnId=b64uFromBuf(cred.rawId);sec.webauthnEnabled=true;await setSec(sec);return true;
+  }catch(e){alert('启用 Face ID 失败：'+(e.message||e));return false;}}
+async function faceIDUnlock(){const sec=await getSec();if(!sec.webauthnEnabled||!sec.webauthnId){alert('尚未启用 Face ID。');return;}
+  try{await navigator.credentials.get({publicKey:{
+      challenge:crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials:[{type:'public-key',id:bufFromB64u(sec.webauthnId)}],
+      userVerification:'required',timeout:60000}});
+    doUnlock();
+  }catch(e){/* 取消或失败，留在锁屏用密码 */}}
+async function doUnlock(){document.getElementById('lock').classList.add('hidden');
   document.getElementById('caseCenter').classList.remove('hidden');
-  renderFilters();renderCases();
-  await boot();renderFilters();renderCases();maybeShowBackupReminder();}
+  renderFilters();renderCases();await boot();renderFilters();renderCases();maybeShowBackupReminder();
+  attachActivity();bumpActivity();applyAutoLock();}
+
+/* 无操作自动锁定 */
+let _idleInt=null,_lastActivity=Date.now(),_autoLockMin=0,_activityBound=false;
+function bumpActivity(){_lastActivity=Date.now();}
+function attachActivity(){if(_activityBound)return;_activityBound=true;
+  ['pointerdown','keydown','touchstart','wheel'].forEach(ev=>document.addEventListener(ev,bumpActivity,{passive:true}));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkIdle();});}
+function checkIdle(){const lock=document.getElementById('lock');
+  if(_autoLockMin>0&&lock&&lock.classList.contains('hidden')&&Date.now()-_lastActivity>_autoLockMin*60000)lockNow();}
+function startIdleWatch(){clearInterval(_idleInt);if(_autoLockMin>0)_idleInt=setInterval(checkIdle,15000);}
+async function applyAutoLock(){const sec=await getSec();_autoLockMin=sec.autoLockMin||0;startIdleWatch();}
+async function saveAutoLock(v){const sec=await getSec();sec.autoLockMin=+v||0;await setSec(sec);_autoLockMin=+v||0;bumpActivity();startIdleWatch();}
+function lockNow(){document.getElementById('caseCenter').classList.add('hidden');
+  document.getElementById('workbench').classList.add('hidden');closeModal();
+  document.getElementById('lock').classList.remove('hidden');renderLock();}
+async function openSecurity(){const sec=await getSec();const sup=await faceIDSupported();const al=sec.autoLockMin||0;
+  const opt=(v,l)=>`<option value="${v}" ${al===v?'selected':''}>${l}</option>`;
+  modal(`<div class="modal-hd"><div class="t">锁定与安全</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>无操作自动锁定</label>
+       <select id="secAuto" onchange="saveAutoLock(this.value)">${opt(0,'关闭')}${opt(1,'1 分钟')}${opt(3,'3 分钟')}${opt(5,'5 分钟')}${opt(10,'10 分钟')}${opt(15,'15 分钟')}${opt(30,'30 分钟')}</select>
+       <div class="tiny" style="margin-top:4px">椅位离开超过该时长无操作，自动回到锁屏，需重新解锁。</div></div>
+     <div class="field"><label>修改解锁密码</label>
+       <input type="password" id="secNew" inputmode="numeric" placeholder="新密码（≥4 位）" style="margin-bottom:8px">
+       <input type="password" id="secNew2" inputmode="numeric" placeholder="再次输入新密码"></div>
+     <div class="field"><label>Face ID / Touch ID</label>
+       ${sec.webauthnEnabled
+         ?`<div class="row"><span class="muted">已启用</span><span style="flex:1"></span><button class="btn btn-secondary btn-sm" onclick="disableFaceID()">关闭 Face ID</button></div>`
+         :(sup?`<button class="btn btn-secondary btn-sm" onclick="enableFaceIDFromSettings()">启用 Face ID / Touch ID</button>`
+              :`<div class="tiny">当前环境不支持（需 https 访问，本地 file:// 不可）。部署到 GitHub Pages 后可用。</div>`)}</div>
+     <button class="btn btn-secondary btn-sm" onclick="lockNow()">立即锁定</button>
+   </div>
+   <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="changePin()">保存新密码</button></div>`);}
+async function changePin(){const a=document.getElementById('secNew').value||'',b=document.getElementById('secNew2').value||'';
+  if(a.length<4){alert('密码至少 4 位。');return;}if(a!==b){alert('两次输入不一致。');return;}
+  const salt=b64uFromBuf(crypto.getRandomValues(new Uint8Array(16)));const h=await sha256Hex(salt+a);
+  const sec=await getSec();sec.pinHash=h;sec.pinSalt=salt;await setSec(sec);alert('密码已更新。');closeModal();}
+async function enableFaceIDFromSettings(){if(await enableFaceID()){alert('Face ID 已启用。');closeModal();}}
+async function disableFaceID(){const sec=await getSec();sec.webauthnEnabled=false;delete sec.webauthnId;await setSec(sec);alert('已关闭 Face ID。');closeModal();}
 async function resetDemo(){if(!confirm('重置演示会清空当前全部数据并恢复示例，确定？'))return;
   try{await idbClearAll();}catch(e){}cases=seed();uid=1000;try{await persistNow();}catch(e){}renderCases();}
 document.getElementById('langSel').addEventListener('change',renderWB);
+renderLock();
 if('serviceWorker' in navigator){
   let _swReloaded=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(_swReloaded)return;_swReloaded=true;location.reload();});

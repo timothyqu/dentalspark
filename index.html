@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>DentalSpark 口腔椅旁沟通系统</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0B1F3A">
+<meta name="application-name" content="DentalSpark">
+<meta name="apple-mobile-web-app-title" content="DentalSpark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+:root{
+  --deep:#0B1F3A; --blue:#1E88E5; --teal:#00BFA6; --soft:#F8FAFC; --lightblue:#E8F1FA;
+  --ink:#1B2733; --subtle:#5B6B7B;
+  --amber:#F6C343; --green:#43A047; --red:#EF5350; --purple:#7E57C2; --sky:#29B6F6;
+  --rose:#D8A48F; --gray:#90A4AE; --orange:#FB8C00;
+  --radius:14px; --shadow:0 2px 10px rgba(11,31,58,.08);
+  --font:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Noto Sans CJK SC",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--soft);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit}
+.hidden{display:none!important}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:var(--radius);padding:0 18px;height:44px;font-size:15px;font-weight:600}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--deep));color:#fff}
+.btn-primary:active{opacity:.88}
+.btn-secondary{background:rgba(232,241,250,.7);color:var(--deep);border:1px solid var(--lightblue);backdrop-filter:blur(6px)}
+.btn-ghost{color:var(--blue);font-weight:600}
+.btn-danger{color:var(--red);font-weight:600}
+.btn-sm{height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:600;background:var(--lightblue);color:var(--ink)}
+.chip.on{color:#fff}
+
+.card{background:#fff;border:1px solid var(--lightblue);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-accent{display:flex}
+.card-accent .bar{width:4px;flex:none}
+.card-body{padding:16px;flex:1}
+.muted{color:var(--subtle);font-size:13px}
+.tiny{color:var(--gray);font-size:12px}
+
+/* ===== Lock ===== */
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--blue),var(--deep));z-index:50}
+#lock .box{text-align:center;color:#fff;max-width:420px;padding:32px}
+#lock h1{font-size:40px;margin:0;font-weight:800;letter-spacing:.5px}
+#lock h2{font-size:18px;margin:6px 0 0;font-weight:600;opacity:.9}
+#lock p{font-size:13px;opacity:.78;margin:18px 0}
+#lock .btn-secondary{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.scope-ic{width:56px;height:56px;margin-bottom:12px}
+
+/* ===== Case center ===== */
+.topbar{display:flex;align-items:center;gap:16px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--lightblue);position:sticky;top:0;z-index:10}
+.topbar .title{font-size:22px;font-weight:700;color:var(--deep)}
+.topbar .spacer{flex:1}
+.search{flex:1;max-width:420px;display:flex;align-items:center;gap:8px;background:var(--soft);border:1px solid var(--lightblue);border-radius:12px;padding:0 12px;height:40px}
+.search input{border:none;background:none;outline:none;width:100%;font-size:15px;color:var(--ink)}
+.cc-wrap{padding:22px;max-width:1200px;margin:0 auto}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.case-card{cursor:pointer;transition:transform .12s, box-shadow .12s}
+.case-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(11,31,58,.12)}
+.avatar{width:40px;height:40px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.badge{font-size:12px;padding:3px 10px;border-radius:999px}
+.row{display:flex;align-items:center;gap:10px}
+.divider{height:1px;background:var(--lightblue);margin:10px 0}
+
+/* ===== Workbench ===== */
+#workbench{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--soft)}
+.wb-toolbar{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#fff;border-bottom:1px solid var(--lightblue)}
+.wb-toolbar .case-title{font-size:18px;font-weight:700;color:var(--deep)}
+.seg{display:inline-flex;background:var(--lightblue);border-radius:10px;padding:3px}
+.seg button{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--subtle)}
+.seg button.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(11,31,58,.12)}
+.savestate{font-size:12px;color:var(--subtle);display:flex;align-items:center;gap:4px}
+.wb-main{flex:1;display:flex;min-height:0}
+.rail{width:84px;flex:none;background:#fff;border-right:1px solid var(--lightblue);padding:12px 8px;display:flex;flex-direction:column;gap:8px}
+.rail button{display:flex;flex-direction:column;align-items:center;gap:4px;height:62px;border-radius:10px;font-size:12px;color:var(--subtle)}
+.rail button.on{background:var(--lightblue);color:var(--blue)}
+.rail svg{width:22px;height:22px}
+.center{flex:1;min-width:0;overflow:auto;padding:20px}
+.panel{width:330px;flex:none;background:#fff;border-left:1px solid var(--lightblue);padding:16px;overflow:auto}
+.timeline-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border-top:1px solid var(--lightblue);flex-wrap:wrap}
+.tl-pill{font-size:12px;padding:6px 12px;border-radius:999px;background:var(--lightblue);color:var(--subtle)}
+.tl-pill.on{background:var(--blue);color:#fff}
+
+/* tooth chart */
+.arch{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:18px}
+.arch-label{font-size:12px;color:var(--subtle)}
+.teeth{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.tooth{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.tooth .crown{width:34px;height:46px;border-radius:8px;border:1px solid var(--lightblue);background:#fff;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.tooth.sel .crown{border:2.5px solid var(--blue)}
+.tooth .crown svg{width:16px;height:16px}
+.tooth .num{font-size:10px;color:var(--subtle);height:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.legend .li{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--subtle)}
+.dot{width:10px;height:10px;border-radius:50%}
+
+/* gallery */
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.thumb{cursor:pointer}
+.thumb .img{height:130px;border-radius:10px;background:var(--lightblue) center/cover no-repeat;position:relative;display:flex;align-items:center;justify-content:center;color:var(--gray)}
+.thumb .tag{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.45);color:#fff;font-size:10px;padding:2px 6px;border-radius:999px}
+.thumb .cap{font-size:12px;color:var(--subtle);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* before/after slider */
+.ba{position:relative;width:100%;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:#000;user-select:none;touch-action:none}
+.ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ba .after{clip-path:inset(0 0 0 0)}
+.ba .before{}
+.ba .balabel{position:absolute;top:8px;font-size:12px;font-weight:600;color:#fff;padding:3px 8px;border-radius:999px}
+.ba .l-before{left:8px;background:rgba(11,31,58,.9)}
+.ba .l-after{right:8px;background:rgba(0,191,166,.9)}
+.ba .handle{position:absolute;top:0;bottom:0;width:2px;background:#fff;transform:translateX(-1px)}
+.ba .knob{position:absolute;top:50%;width:36px;height:36px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);
+  display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(11,31,58,.4);color:var(--blue);font-weight:700}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(11,31,58,.4);display:flex;align-items:center;justify-content:center;z-index:40;padding:20px}
+.modal{background:#fff;border-radius:18px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--lightblue)}
+.modal-hd .t{font-size:16px;font-weight:700;flex:1}
+.modal-bd{padding:18px;overflow:auto}
+.modal-ft{padding:12px 18px;border-top:1px solid var(--lightblue);display:flex;justify-content:flex-end;gap:10px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--subtle);margin-bottom:6px}
+.field select,.field input[type=text],.field textarea{width:100%;border:1px solid var(--lightblue);border-radius:10px;padding:10px;font-size:15px;outline:none;background:var(--soft)}
+.field textarea{min-height:72px;resize:vertical}
+.toggle{display:flex;align-items:center;gap:10px;cursor:pointer}
+.surfaces{display:flex;gap:8px;flex-wrap:wrap}
+.sfc{height:30px;padding:0 10px;border-radius:999px;font-size:13px;background:var(--lightblue);color:var(--ink)}
+.sfc.on{background:var(--blue);color:#fff}
+.preview-line{background:var(--soft);border:1px solid var(--lightblue);border-radius:10px;padding:10px;margin-bottom:8px}
+.preview-line .k{font-size:12px;color:var(--subtle);margin-bottom:3px}
+
+/* report */
+.sig-pad{border:1px solid var(--lightblue);border-radius:10px;background:#fff;touch-action:none}
+.report-doc{background:#fff;color:#111;max-width:760px;margin:0 auto;border-radius:8px;overflow:hidden;box-shadow:var(--shadow)}
+.rb-banner{background:var(--deep);color:#fff;padding:22px 26px}
+.rb-banner .clinic{font-size:13px;font-weight:600;opacity:.9}
+.rb-banner .h{font-size:24px;font-weight:800;margin:6px 0 4px}
+.rb-sec{padding:6px 26px 16px}
+.rb-sec h3{font-size:15px;color:var(--deep);border-bottom:2px solid var(--lightblue);padding-bottom:6px}
+.rb-li{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:13px}
+.rb-imgs{display:flex;gap:10px;flex-wrap:wrap}
+.rb-imgs img{width:160px;height:120px;object-fit:cover;border-radius:8px}
+.rb-cmp{display:flex;gap:8px;margin:8px 0}
+.rb-cmp figure{margin:0;flex:1}
+.rb-cmp img{width:100%;height:120px;object-fit:cover;border-radius:8px}
+.rb-cmp figcaption{font-size:11px;color:var(--subtle);margin-top:3px}
+.rb-sign{display:flex;gap:18px;margin-top:10px}
+.rb-sign .box{flex:1;border:1px solid #ccd;border-radius:8px;height:90px;position:relative;padding:6px}
+.rb-sign .box span{font-size:11px;color:var(--subtle)}
+.rb-sign .box img{position:absolute;inset:20px 8px 8px;max-height:60px;object-fit:contain}
+
+.empty{text-align:center;color:var(--subtle);padding:50px 20px}
+.empty svg{width:40px;height:40px;opacity:.5;margin-bottom:10px}
+
+/* viewer */
+.viewer{display:flex;flex-direction:column}
+.vstage{height:min(58vh,460px);position:relative;overflow:hidden;background:#0b0b0b;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.vinner{position:relative;transform-origin:center center;line-height:0}
+.vinner img{display:block;max-width:100%;max-height:min(58vh,460px);user-select:none;-webkit-user-drag:none}
+.vinner canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.vtools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 0}
+.vtools .grp{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--subtle)}
+.vtools input[type=range]{width:96px}
+.vtool-btn{height:32px;padding:0 10px;border-radius:8px;background:var(--lightblue);color:var(--ink);font-size:13px;font-weight:600}
+.vtool-btn.on{background:var(--blue);color:#fff}
+
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{position:absolute;inset:0;padding:0}
+  .report-doc{box-shadow:none;max-width:100%}
+}
+@media(max-width:820px){
+  .wb-main{flex-direction:column}
+  .panel{width:100%;border-left:none;border-top:1px solid var(--lightblue)}
+  .rail{flex-direction:row;width:100%;height:auto;overflow:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div class="box">
+    <svg class="scope-ic" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M5 3v6a7 7 0 0 0 14 0V3"/><circle cx="12" cy="15" r="6"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
+    <h1>DentalSpark</h1>
+    <h2>口腔椅旁沟通系统</h2>
+    <p>病例资料本地加密保存，请验证身份后进入。<br><span style="opacity:.7">（网页预览版 · 数据仅存于本次浏览，刷新即重置）</span></p>
+    <button class="btn btn-secondary" onclick="unlock()">使用 Face ID / 密码解锁</button>
+  </div>
+</div>
+
+<!-- CASE CENTER -->
+<div id="caseCenter" class="hidden">
+  <div class="topbar">
+    <div class="title">病例中心</div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+      <input id="searchInput" placeholder="搜索患者 / 病例 / 分类" oninput="renderCases()">
+    </div>
+    <button class="btn btn-primary" onclick="openNewCase()">＋ 快速新建</button>
+    <button class="btn btn-ghost btn-sm" onclick="resetDemo()">重置演示</button>
+  </div>
+  <div class="cc-wrap">
+    <div class="filters" id="filters"></div>
+    <div id="caseList"></div>
+  </div>
+</div>
+
+<!-- WORKBENCH -->
+<div id="workbench" class="hidden">
+  <div class="wb-toolbar">
+    <button class="btn btn-ghost btn-sm" onclick="backToCases()">‹ 病例</button>
+    <div class="case-title" id="wbTitle"></div>
+    <div class="spacer" style="flex:1"></div>
+    <div class="seg" id="viewSeg">
+      <button data-v="patient" class="on" onclick="setView('patient')">患者视图</button>
+      <button data-v="doctor" onclick="setView('doctor')">医生视图</button>
+    </div>
+    <select id="langSel" class="btn-sm" style="border:1px solid var(--lightblue);border-radius:10px;height:34px;padding:0 8px">
+      <option>中文</option><option>中/EN</option>
+    </select>
+    <div class="savestate"><span id="saveDot">●</span> <span id="saveTxt">已保存</span></div>
+    <button class="btn btn-primary btn-sm" onclick="openReport()">生成报告</button>
+  </div>
+  <div class="wb-main">
+    <div class="rail" id="rail"></div>
+    <div class="center" id="wbCenter"></div>
+    <div class="panel" id="wbPanel"></div>
+  </div>
+  <div class="timeline-bar" id="timelineBar"></div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="printArea" class="hidden"></div>
+
+<script>
+/* ============ 引擎（与 Swift 版同规则） ============ */
+const PERM_UPPER=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+const PERM_LOWER=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+
+function toothKind(fdi){const p=fdi%10;if(p<=2)return '门牙';if(p===3)return '尖牙';if(p<=5)return '小后牙';return '大牙';}
+function patientLabel(fdi){const q=Math.floor(fdi/10);let v='';
+  if(q===1||q===5)v='右上';else if(q===2||q===6)v='左上';else if(q===3||q===7)v='左下';else v='右下';
+  return v+toothKind(fdi);}
+
+const COLORS={observe:'--gray',prevention:'--green',filling:'--amber',endodontic:'--orange',
+  extraction:'--red',implant:'--purple',aesthetic:'--teal'};
+const COLOR_NAME={observe:'观察随访',prevention:'预防 / 洁治 / 维护',filling:'充填 / 嵌体 / 贴面',
+  endodontic:'根管 / 冠 / 复杂修复',extraction:'拔除 / 急症 / 高风险',implant:'种植 / 正畸牵引',aesthetic:'美学 / DSD / 贴面区'};
+function cvar(tag){return getComputedStyle(document.documentElement).getPropertyValue(COLORS[tag]).trim();}
+
+const PROBLEMS={
+  caries:'龋坏',defect:'牙体缺损',perio:'牙周问题',impacted:'阻生牙',missing:'缺牙',
+  malposition:'牙列错位',restorationFailure:'旧修复体不良',observation:'观察随访'};
+const PROBLEM_DEFAULT_COLOR={caries:'filling',defect:'filling',restorationFailure:'filling',
+  perio:'prevention',impacted:'extraction',missing:'extraction',malposition:'implant',observation:'observe'};
+
+const TREATMENTS={
+  observation:['观察随访','先观察、定期复查','observe'],
+  resinFilling:['树脂充填','补牙','filling'],
+  inlay:['嵌体','做嵌体修复','filling'],
+  onlay:['高嵌体','做高嵌体修复','filling'],
+  veneer:['贴面','做贴面','aesthetic'],
+  crown:['全冠','做牙冠（牙套）','endodontic'],
+  postCoreCrown:['桩核冠','做桩核冠修复','endodontic'],
+  rootCanal:['根管治疗','做根管治疗（杀神经）后再修复','endodontic'],
+  scaling:['洁治（洗牙）','洗牙','prevention'],
+  subgingivalCuretage:['龈下刮治','做牙周深部清洁','prevention'],
+  perioMaintenance:['牙周维护','定期牙周维护','prevention'],
+  perioSurgery:['牙周手术','做牙周手术','prevention'],
+  splinting:['松牙固定','把松动的牙固定起来','prevention'],
+  extraction:['拔除','拔除','extraction'],
+  implantSite:['种植修复','种牙（种植）','implant'],
+  bridge:['固定桥','做固定桥','implant'],
+  denture:['活动义齿','做活动假牙','implant'],
+  orthodontics:['正畸矫正','做牙齿矫正','implant'],
+};
+function tName(t){return TREATMENTS[t]?TREATMENTS[t][0]:'';}
+function tPatient(t){return TREATMENTS[t]?TREATMENTS[t][1]:'进一步处理';}
+function tColor(t){return TREATMENTS[t]?TREATMENTS[t][2]:'observe';}
+function optionsFor(p){return ({
+  caries:['observation','resinFilling','inlay','onlay','veneer','crown','rootCanal','postCoreCrown'],
+  defect:['observation','resinFilling','inlay','onlay','veneer','crown','rootCanal','postCoreCrown'],
+  restorationFailure:['resinFilling','inlay','onlay','crown','postCoreCrown'],
+  perio:['scaling','subgingivalCuretage','perioMaintenance','perioSurgery','splinting','extraction'],
+  impacted:['extraction','observation'],
+  missing:['implantSite','bridge','denture','observation'],
+  malposition:['orthodontics','observation'],
+  observation:['observation'],
+})[p]||['observation'];}
+
+const SEV={mild:'轻度',moderate:'中度',severe:'重度'};
+const SEV_WORD={mild:'较浅的',moderate:'中等深度的',severe:'比较深的'};
+const SURFACES={mesial:'近中',distal:'远中',buccal:'颊侧',lingual:'舌侧',occlusal:'咬合面'};
+const IMPACTION={mesial:'近中阻生',horizontal:'水平阻生',vertical:'垂直阻生',distal:'远中阻生',buccolingual:'颊舌向阻生'};
+const NERVE={clear:'与神经管/上颌窦有安全距离',close:'接近神经管/上颌窦',contact:'紧邻神经管/上颌窦'};
+const DIFF={low:'低',medium:'中',high:'高'}; const DIFF_WORD={low:'较低',medium:'中等',high:'较高'};
+const MOBILITY={none:'不松动',i:'I 度',ii:'II 度',iii:'III 度'};
+
+function surfaceText(set){const order=['mesial','distal','buccal','lingual','occlusal'];
+  return order.filter(s=>set.includes(s)).map(s=>SURFACES[s]).join('、');}
+
+function recText(f){if(f.treatment)return tName(f.treatment);return (f.recommendation||'').trim()||'进一步处理';}
+
+function doctorText(f){const tooth=f.fdi+' 牙';const rec=recText(f);
+  switch(f.problem){
+    case 'caries': case 'defect':{const face=f.surfaces.length?surfaceText(f.surfaces)+'面':'';const name=f.problem==='caries'?'龋坏':'牙体缺损';
+      return `${tooth}${face}${SEV[f.severity]}${name}，建议${rec}。`;}
+    case 'restorationFailure': return `${tooth}旧修复体不良，建议${rec}。`;
+    case 'perio':{let p=[];if(f.pocket>0)p.push(`牙周袋约 ${f.pocket}mm`);if(f.bleeding)p.push('探诊出血');if(f.mobility&&f.mobility!=='none')p.push('松动 '+MOBILITY[f.mobility]);
+      return `${tooth}${p.length?p.join('、'):'牙周状况欠佳'}，建议${rec}。`;}
+    case 'impacted':{let p=[];if(f.impaction)p.push(IMPACTION[f.impaction]);if(f.nerve)p.push(NERVE[f.nerve]);if(f.difficulty)p.push('拔除难度'+DIFF[f.difficulty]);
+      return `${tooth}${p.length?p.join('，'):'阻生'}，建议${rec}。`;}
+    case 'missing': return `${tooth}缺失，建议${rec}。`;
+    case 'malposition': return `${tooth}牙列错位，建议${rec}。`;
+    default: return `${tooth}暂无需处理，建议观察随访。`;
+  }}
+function patientText(f){const pos=patientLabel(f.fdi);const rec=f.treatment?tPatient(f.treatment):'进一步处理';
+  switch(f.problem){
+    case 'caries': return `您${pos}有一个${SEV_WORD[f.severity]}蛀牙，建议${rec}，避免继续发展到牙神经引起疼痛。`;
+    case 'defect': return `您${pos}有牙体缺损，建议${rec}，尽早修复以免裂得更大。`;
+    case 'restorationFailure': return `您${pos}以前的修复有点问题，建议${rec}，重新做得更稳妥。`;
+    case 'perio':{let why='牙龈有炎症';if(f.bleeding)why='刷牙时牙龈容易出血';if(f.mobility&&f.mobility!=='none')why+='、牙齿有点松';
+      return `您${pos}周围${why}，建议${rec}，把牙周护理好，牙齿才能用得久。`;}
+    case 'impacted':{const d=f.difficulty?`这颗拔除难度${DIFF_WORD[f.difficulty]}。`:'';
+      return `您${pos}（智齿）长得不正，容易发炎、还可能蛀坏旁边的牙，建议拔掉。${d}`;}
+    case 'missing': return `您${pos}这里缺了一颗牙，建议${rec}，把咀嚼功能补回来。`;
+    case 'malposition': return `您的牙齿排列不太整齐，建议${rec}，既好看也更好清洁。`;
+    default: return `您${pos}目前问题不大，先观察、定期复查就好。`;
+  }}
+function patientDisplay(f){return (f.patientExplanation&&f.patientExplanation.trim())?f.patientExplanation:patientText(f);}
+
+/* timeline */
+const STAGE_TITLE={1:'① 基础治疗',2:'② 拔牙 / 根管',3:'③ 种植 / 正畸 / 骨增量',4:'④ 最终修复',5:'⑤ 维护复查'};
+const STAGE_NOTE={1:'洁治、牙周、补牙、急症处理等基础项目。',2:'拔牙、根管治疗及必要的临时修复。',
+  3:'种植、正畸或骨增量等专科治疗。',4:'贴面、嵌体、冠等最终修复。',5:'长期维护与定期复查，巩固治疗效果。'};
+function stageFor(t){
+  if(['scaling','subgingivalCuretage','perioMaintenance','perioSurgery','splinting','resinFilling','observation'].includes(t))return 1;
+  if(['extraction','rootCanal'].includes(t))return 2;
+  if(['implantSite','orthodontics'].includes(t))return 3;
+  return 4;}
+function buildTimeline(c){const bucket={1:[],2:[],3:[],4:[],5:[]};
+  c.findings.forEach(f=>{if(!f.treatment||f.treatment==='observation')return;
+    bucket[stageFor(f.treatment)].push({fdi:f.fdi,patient:`${patientLabel(f.fdi)} · ${tPatient(f.treatment)}`});});
+  const weeks={1:2,2:3,3:12,4:4,5:26};
+  return [1,2,3,4,5].map(i=>{const items=bucket[i];
+    const visits=i===5?1:(i===3?Math.max(2,items.length*2):Math.max(items.length?1:0,items.length));
+    return {index:i,title:STAGE_TITLE[i],items,note:STAGE_NOTE[i],visits,weeks:(items.length||i===5)?weeks[i]:0,active:items.length>0||i===5};});}
+
+/* ============ 数据 ============ */
+const CATS={comprehensive:'综合治疗',implant:'种植',aesthetic:'美学修复',ortho:'正畸',perio:'牙周',pediatric:'儿童牙科'};
+const CAT_COLOR={comprehensive:'--blue',implant:'--purple',aesthetic:'--rose',ortho:'--sky',perio:'--green',pediatric:'--teal'};
+const STATUS={inProgress:['进行中','--gray'],communicated:['已沟通','--blue'],delivered:['已交付','--green']};
+let uid=1; const nid=()=>'id'+(uid++);
+
+function seed(){
+  return [
+    {id:nid(),name:'张伟',gender:'男',category:'comprehensive',status:'inProgress',updated:Date.now()-3600e3,
+      findings:[
+        {id:nid(),fdi:46,problem:'caries',surfaces:['occlusal','distal'],severity:'moderate',treatment:'resinFilling',colorTag:'filling',confirmed:true,patientExplanation:''},
+        {id:nid(),fdi:48,problem:'impacted',surfaces:[],severity:'moderate',treatment:'extraction',colorTag:'extraction',confirmed:false,impaction:'mesial',nerve:'close',difficulty:'medium',patientExplanation:''},
+      ],assets:[],comparisons:[],reports:[]},
+    {id:nid(),name:'李娜',gender:'女',category:'perio',status:'communicated',updated:Date.now()-8600e3,
+      findings:[{id:nid(),fdi:36,problem:'perio',surfaces:[],severity:'moderate',treatment:'subgingivalCuretage',colorTag:'prevention',confirmed:false,pocket:5,bleeding:true,mobility:'i',patientExplanation:''}],
+      assets:[],comparisons:[],reports:[]},
+    {id:nid(),name:'王芳',gender:'女',category:'aesthetic',status:'inProgress',updated:Date.now()-100000e3,
+      findings:[],assets:[],comparisons:[],reports:[]},
+  ];}
+let cases=seed();
+let cur=null, view='patient', selTooth=null, tab='tooth';
+
+/* ============ 渲染：病例中心 ============ */
+let filterCat=null;
+function renderFilters(){const el=document.getElementById('filters');
+  const mk=(label,val,color)=>`<button class="chip ${filterCat===val?'on':''}" style="${filterCat===val?`background:var(${color||'--blue'})`:''}" onclick="setFilter(${val?`'${val}'`:'null'})">${label}</button>`;
+  el.innerHTML=mk('全部',null,'--blue')+Object.entries(CATS).map(([k,v])=>mk(v,k,CAT_COLOR[k])).join('');}
+function setFilter(v){filterCat=v;renderFilters();renderCases();}
+function renderCases(){
+  const q=(document.getElementById('searchInput').value||'').trim();
+  const list=cases.filter(c=>(!filterCat||c.category===filterCat)&&
+    (!q||c.name.includes(q)||CATS[c.category].includes(q)));
+  const el=document.getElementById('caseList');
+  if(!list.length){el.innerHTML=`<div class="empty">没有匹配的病例。点右上「快速新建」开始。</div>`;return;}
+  el.innerHTML=`<div class="muted" style="margin-bottom:10px;font-weight:600;color:var(--ink)">最近病例</div><div class="grid">`+
+    list.map(c=>{const col=`var(${CAT_COLOR[c.category]})`;const st=STATUS[c.status];
+      return `<div class="card case-card card-accent" onclick="openCase('${c.id}')">
+        <div class="bar" style="background:${col}"></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="avatar" style="background:${col}">${c.name[0]}</div>
+            <div><div style="font-weight:700">${c.name}</div><div class="tiny">${CATS[c.category]}</div></div>
+            <div style="flex:1"></div>
+            <div class="badge" style="color:var(${st[1]});background:color-mix(in srgb,var(${st[1]}) 14%,#fff)">${st[0]}</div>
+          </div>
+          <div class="divider"></div>
+          <div class="row tiny"><span>✚ ${c.findings.length} 项标记</span><span style="flex:1"></span><span>${timeAgo(c.updated)}</span></div>
+        </div></div>`;}).join('')+`</div>`;
+}
+function timeAgo(t){const m=Math.floor((Date.now()-t)/60000);if(m<60)return m+' 分钟前';const h=Math.floor(m/60);if(h<24)return h+' 小时前';return Math.floor(h/24)+' 天前';}
+
+/* ============ 工作台 ============ */
+const TABS=[['info','信息','M4 7h16M4 12h10M4 17h7'],['tooth','牙位','tooth'],['media','影像','M3 7h18v12H3z M3 11l5-3 4 3 4-2 5 4'],['plan','方案','M5 4h14v3H5z M5 10h14v3H5z M5 16h9v3H5z'],['report','报告','M6 3h9l4 4v14H6z M14 3v4h4']];
+function railIcon(d){if(d==='tooth')return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 3c-2 0-3 2-3 4 0 3 1 4 1.5 7C6 16 6 20 8 20s1.5-4 2.5-4 .5 4 2.5 4 2-4 2.5-6C19 11 20 10 20 7c0-2-1-4-3-4-2 0-3 1-5 1S9 3 7 3z"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${d}"/></svg>`;}
+function openCase(id){cur=cases.find(c=>c.id===id);selTooth=null;tab='tooth';
+  document.getElementById('caseCenter').classList.add('hidden');
+  document.getElementById('workbench').classList.remove('hidden');
+  document.getElementById('wbTitle').textContent=cur.name+' · '+CATS[cur.category];
+  renderRail();renderWB();}
+function backToCases(){document.getElementById('workbench').classList.add('hidden');
+  document.getElementById('caseCenter').classList.remove('hidden');renderCases();}
+function renderRail(){document.getElementById('rail').innerHTML=TABS.map(t=>
+  `<button class="${tab===t[0]?'on':''}" onclick="setTab('${t[0]}')">${railIcon(t[2])}<span>${t[1]}</span></button>`).join('');}
+function setTab(t){tab=t;renderRail();renderWB();}
+function setView(v){view=v;document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));renderWB();}
+function flashSave(){const d=document.getElementById('saveDot'),t=document.getElementById('saveTxt');
+  d.style.color='var(--amber)';t.textContent='保存中…';
+  setTimeout(()=>{d.style.color='var(--green)';t.textContent='已保存';},350);}
+
+function renderWB(){
+  renderTimelineBar();
+  const C=document.getElementById('wbCenter'),P=document.getElementById('wbPanel');
+  if(tab==='tooth'){C.innerHTML=toothChartHTML();P.innerHTML=panelHTML();}
+  else if(tab==='media'){C.innerHTML=mediaHTML();P.innerHTML=mediaPanelHTML();bindBA();}
+  else if(tab==='plan'){C.innerHTML=planHTML();P.innerHTML='<div class="muted">治疗时间轴根据「牙位」里选择的治疗自动生成。</div>';}
+  else if(tab==='report'){C.innerHTML=reportTabHTML();P.innerHTML='<div class="muted">报告面向患者，先给结论、用通俗语言，含签字与合规声明。</div>';}
+  else {C.innerHTML=infoHTML();P.innerHTML='<div class="muted">患者基础信息与主诉。</div>';}
+}
+
+function infoHTML(){return `<div class="card" style="max-width:560px"><div class="card-body">
+  <h3 style="margin-top:0">患者信息</h3>
+  <div class="row" style="margin-bottom:10px"><div class="avatar" style="background:var(${CAT_COLOR[cur.category]})">${cur.name[0]}</div>
+  <div><div style="font-weight:700;font-size:18px">${cur.name}</div><div class="tiny">${cur.gender} · ${CATS[cur.category]}</div></div></div>
+  <div class="muted">主诉：以演示数据为准。病史、过敏史等字段在 App 完整版中可录入。</div>
+</div>`;}
+
+/* ---- 牙位图 ---- */
+function toothColor(c,fdi){const f=c.findings.find(x=>x.fdi===fdi);return f?f.colorTag:null;}
+function archHTML(label,arr){return `<div class="arch"><div class="arch-label">${label}</div><div class="teeth">`+
+  arr.map(fdi=>{const tag=toothColor(cur,fdi);const fill=tag?cvar(tag):'#fff';
+    const white=tag?'#fff':'rgba(144,164,174,.5)';
+    return `<div class="tooth ${selTooth===fdi?'sel':''}" onclick="selectTooth(${fdi})">
+      <div class="crown" style="background:${fill}">
+        <svg viewBox="0 0 24 24" fill="${white}"><path d="M7 3c-2 0-3 2-3 4 0 3 1 4 1.5 7C6 16 6 20 8 20s1.5-4 2.5-4 .5 4 2.5 4 2-4 2.5-6C19 11 20 10 20 7c0-2-1-4-3-4-2 0-3 1-5 1S9 3 7 3z"/></svg>
+      </div>
+      <div class="num">${view==='doctor'?fdi:''}</div></div>`;}).join('')+`</div></div>`;}
+function toothChartHTML(){
+  const legend=`<div class="legend">`+Object.keys(COLOR_NAME).map(k=>
+    `<div class="li"><span class="dot" style="background:${cvar(k)}"></span>${COLOR_NAME[k]}</div>`).join('')+`</div>`;
+  return archHTML('上颌',PERM_UPPER)+archHTML('下颌',PERM_LOWER)+legend;}
+function selectTooth(fdi){selTooth=fdi;renderWB();}
+
+/* ---- 治疗卡片面板 ---- */
+function panelHTML(){
+  if(selTooth===null)return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="1.6"><path d="M12 11v8M9 14l3-3 3 3"/><circle cx="12" cy="6" r="2"/></svg><div>点击牙位查看 / 添加</div></div>`;
+  const fs=cur.findings.filter(f=>f.fdi===selTooth);
+  const title=view==='doctor'?`牙位 ${selTooth}`:patientLabel(selTooth);
+  let html=`<div style="font-weight:700;font-size:16px;margin-bottom:4px">治疗卡片</div>
+    <div style="color:var(--blue);font-weight:600;margin-bottom:10px">${title}</div>`;
+  if(!fs.length)html+=`<div class="muted" style="margin-bottom:10px">尚无标记，点下方添加。</div>`;
+  else fs.forEach(f=>{const txt=view==='doctor'?doctorText(f):patientDisplay(f);
+    html+=`<div class="card card-accent" style="margin-bottom:8px;cursor:pointer" onclick="editFinding('${f.id}')">
+      <div class="bar" style="background:${cvar(f.colorTag)}"></div>
+      <div class="card-body" style="padding:12px">
+        <div class="row"><b>${PROBLEMS[f.problem]}</b>${f.treatment?`<span class="tiny">· ${tName(f.treatment)}</span>`:''}<span style="flex:1"></span><span class="tiny">›</span></div>
+        <div class="muted" style="margin:4px 0">${txt}</div>
+        <div style="font-size:12px;color:${f.confirmed?'var(--green)':'var(--orange)'}">${f.confirmed?'✓ 已确认':'⚠ 待医生确认'}</div>
+      </div></div>`;});
+  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addFinding()">＋ 添加问题</button>`;
+  if(fs.length)html+=`<button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="clearTooth()">清除该牙</button>`;
+  return html;}
+function clearTooth(){cur.findings=cur.findings.filter(f=>f.fdi!==selTooth);flashSave();renderWB();}
+
+/* ---- 时间轴 ---- */
+function renderTimelineBar(){const plan=buildTimeline(cur);
+  document.getElementById('timelineBar').innerHTML=plan.map(s=>
+    `<span class="tl-pill ${s.active?'on':''}">${s.title}</span>`).join('')+
+    `<span style="flex:1"></span><span class="tiny">点「方案」看完整时间轴</span>`;}
+function planHTML(){const plan=buildTimeline(cur).filter(s=>s.active);
+  if(buildTimeline(cur).every(s=>!s.items.length))return `<div class="empty">先在「牙位」标记问题并选择治疗，这里会自动生成阶段计划。</div>`;
+  return `<h3 style="margin-top:0">治疗计划时间轴</h3><div class="muted" style="margin-bottom:14px">依据已标记问题自动编排，次数与周期为估算，以面诊为准。</div>`+
+    plan.map(s=>`<div class="card card-accent" style="margin-bottom:10px"><div class="bar" style="background:var(--blue)"></div>
+      <div class="card-body"><div class="row"><b>${s.title}</b><span style="flex:1"></span>${s.items.length?`<span class="tiny">约 ${s.visits} 次 · ${s.weeks} 周</span>`:''}</div>
+      ${s.items.length?s.items.map(i=>`<div class="muted">· ${i.patient}</div>`).join(''):`<div class="muted">${s.note}</div>`}
+      </div></div>`).join('');}
+
+/* ============ 影像 ============ */
+let mediaMode='photos';
+const SOURCES={intraoralPhoto:'口内照',facialPhoto:'面像照',microscope:'显微镜下照片',upload:'上传图片',cbct:'CBCT 截图'};
+const SOURCE_CAP={intraoralPhoto:'这是您口内的实际照片。',facialPhoto:'这是您的面部/微笑照片。',
+  microscope:'这是在显微镜放大下拍到的照片，可以看清楚细微的问题。',upload:'供您参考的图片。',cbct:'这是您的口腔三维影像。'};
+const RADIO_TYPES={periapical:'根尖片',bitewing:'咬翼片',pano:'全景片',cbct:'CBCT 截图'};
+const RADIO_CAP='这是您的牙片影像，红色是医生标注的位置。';
+function sourceLabel(a){return a.kind==='radio'?RADIO_TYPES[a.radioType]:SOURCES[a.source];}
+function assetCap(a){return a.caption||(a.kind==='radio'?RADIO_CAP:SOURCE_CAP[a.source]);}
+function mediaHTML(){
+  const tab=(m,l)=>`<button class="chip ${mediaMode===m?'on':''}" style="${mediaMode===m?'background:var(--blue)':''}" onclick="setMediaMode('${m}')">${l}</button>`;
+  return `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    ${tab('photos','照片')}${tab('radio','阅片 · 牙片/CBCT')}${tab('compare','术前 / 术后对比')}
+  </div>`+ (mediaMode==='photos'?photosHTML():mediaMode==='radio'?radioHTML():compareHTML());}
+function setMediaMode(m){mediaMode=m;renderWB();bindBA();}
+function photosHTML(){
+  const list=cur.assets.filter(a=>a.kind!=='radio');
+  if(!list.length)return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="1.5"><path d="M3 7h18v12H3z"/><path d="M3 13l5-3 4 3 4-2 5 4"/></svg>
+    <div>还没有照片。点右侧「添加影像」导入口内照 / 面像照 / 显微镜下照片。</div></div>`;
+  return `<div class="gal-grid">`+list.map(a=>`<div class="thumb" onclick="editAsset('${a.id}')">
+    <div class="img" style="background-image:url('${a.src}')"><span class="tag">${SOURCES[a.source]}</span></div>
+    <div class="cap">${assetCap(a)}</div></div>`).join('')+`</div>`;}
+function radioHTML(){
+  const list=cur.assets.filter(a=>a.kind==='radio');
+  if(!list.length)return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    <div>还没有牙片 / CBCT 截图。点右侧按类型导入，进阅片器调亮度对比、反相、测量、标注。</div></div>`;
+  return `<div class="gal-grid">`+list.map(a=>`<div class="thumb" onclick="openViewer('${a.id}')">
+    <div class="img" style="background-image:url('${a.annotated||a.src}');background-color:#111">
+      <span class="tag">${RADIO_TYPES[a.radioType]}</span>
+      ${a.annotated?'<span class="tag" style="top:auto;bottom:6px;left:6px;background:rgba(30,136,229,.85)">已标注</span>':''}</div>
+    <div class="cap">${assetCap(a)} · ${new Date(a.date).toLocaleDateString('zh-CN')}</div></div>`).join('')+`</div>`;}
+function mediaPanelHTML(){
+  if(mediaMode==='compare')return `<div style="font-weight:700;margin-bottom:8px">术前 / 术后对比</div>
+    <button class="btn btn-secondary btn-sm" onclick="newCompare()" ${cur.assets.length<2?'disabled style=opacity:.5':''}>＋ 新建对比</button>
+    <div class="muted" style="margin-top:8px">${cur.assets.length<2?'先导入至少 2 张图（照片或牙片均可）。':'从已导入影像中选术前与术后，也可对比不同时间的牙片。'}</div>`;
+  if(mediaMode==='radio')return `<div style="font-weight:700;margin-bottom:10px">添加牙片 / 截图</div>`+
+    Object.keys(RADIO_TYPES).filter(t=>t!=='cbct').map(t=>
+      `<button class="btn btn-secondary btn-sm" style="width:100%;justify-content:flex-start;margin-bottom:8px" onclick="importRadio('${t}')">＋ ${RADIO_TYPES[t]}</button>`).join('')+
+    `<button class="btn btn-secondary btn-sm" style="width:100%;justify-content:flex-start;margin-bottom:6px;border-color:var(--purple);color:var(--purple)" onclick="dvOpen()">↗ 打开 DentaView 阅片（同目录）</button>
+     <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:flex-start;margin-bottom:8px" onclick="importRadio('cbct')">＋ 导入 DentaView 截图（PNG 文件）</button>
+     <div class="tiny" style="margin:-2px 0 10px">在 DentaView 里阅片后点「沟通系统」按钮，截图会自动飞回这里；或在 DentaView 点「截图」存成 PNG 再用上面第二项导入（任意目录可用）。需把 DentaView 文件与本页放在<b>同一文件夹</b>才能直接打开。</div>
+     <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px" onclick="openRegionCompare()">⇄ 同名牙位多时间点对比</button>
+     <div class="muted" style="margin-top:6px">阅片器支持：亮度/对比度、反相、灰度、旋转、缩放、<b>定标后真实 mm/角度测量</b>、标注，并可<b>导出标注图/打印</b>、写「一句人话」、选是否纳入报告。</div>
+     <input id="fileInput" type="file" accept="image/*" class="hidden">`;
+  return `<div style="font-weight:700;margin-bottom:10px">添加影像</div>`+
+    Object.keys(SOURCES).filter(s=>s!=='cbct').map(s=>
+      `<button class="btn btn-secondary btn-sm" style="width:100%;justify-content:flex-start;margin-bottom:8px" onclick="importPhoto('${s}')">＋ ${SOURCES[s]}</button>`).join('')+
+    `<div class="muted" style="margin-top:6px">CBCT / 牙片请到「阅片」页导入。</div>
+     <input id="fileInput" type="file" accept="image/*" class="hidden">`;}
+function importPhoto(source){
+  const inp=document.getElementById('fileInput');inp.value='';
+  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const url=URL.createObjectURL(file);
+    cur.assets.push({id:nid(),src:url,kind:'photo',source,caption:SOURCE_CAP[source],includeInReport:true});flashSave();renderWB();};
+  inp.click();}
+function importRadio(type){
+  const inp=document.getElementById('fileInput');inp.value='';
+  inp.onchange=()=>{const file=inp.files[0];if(!file)return;const url=URL.createObjectURL(file);
+    const a={id:nid(),src:url,kind:'radio',radioType:type,date:Date.now(),caption:RADIO_CAP,includeInReport:true,toothRegion:'',
+      adjust:{bri:100,con:100,inv:0,gray:0,rot:0},annos:[],measures:[],calib:null,annotated:null};
+    cur.assets.push(a);flashSave();renderWB();openViewer(a.id);};
+  inp.click();}
+
+/* ===== 阅片器 ===== */
+let VS=null;
+function curAsset(){return cur.assets.find(x=>x.id===VS.id);}
+function openViewer(id){const a=cur.assets.find(x=>x.id===id);
+  a.adjust=a.adjust||{bri:100,con:100,inv:0,gray:0,rot:0};a.annos=a.annos||[];a.measures=a.measures||[];a.calib=a.calib||null;
+  VS={id,scale:1,px:0,py:0,mode:'pan',cur:null,pts:[]};
+  modal(viewerHTML(a));requestAnimationFrame(()=>initViewer(a));}
+function viewerHTML(a){return `
+ <div class="modal-hd"><div class="t">阅片器 · ${RADIO_TYPES[a.radioType]} <span class="tiny" style="font-weight:400">${new Date(a.date).toLocaleDateString('zh-CN')}</span></div></div>
+ <div class="modal-bd">
+   <div class="viewer">
+     <div class="vstage" id="vstage"><div class="vinner" id="vinner"><img id="vimg" src="${a.src}" draggable="false"><canvas id="voverlay"></canvas></div></div>
+     <div class="vtools">
+       <div class="grp">亮度<input type="range" min="40" max="220" value="${a.adjust.bri}" oninput="vAdj('bri',this.value)"></div>
+       <div class="grp">对比<input type="range" min="40" max="220" value="${a.adjust.con}" oninput="vAdj('con',this.value)"></div>
+       <button class="vtool-btn ${a.adjust.inv?'on':''}" id="vInv" onclick="vToggle('inv')">反相</button>
+       <button class="vtool-btn ${a.adjust.gray?'on':''}" id="vGray" onclick="vToggle('gray')">灰度</button>
+       <button class="vtool-btn" onclick="vRotate()">旋转90°</button>
+       <span style="width:1px;height:22px;background:var(--lightblue)"></span>
+       <button class="vtool-btn on" id="mPan" onclick="vMode('pan')">移动</button>
+       <button class="vtool-btn" id="mPen" onclick="vMode('pen')">标注</button>
+       <button class="vtool-btn" id="mCalib" onclick="vMode('calib')">定标</button>
+       <button class="vtool-btn" id="mMeasure" onclick="vMode('measure')">测距</button>
+       <button class="vtool-btn" id="mAngle" onclick="vMode('angle')">测角</button>
+       <button class="vtool-btn" onclick="vClearAnno()">清除</button>
+       <button class="vtool-btn" onclick="vReset()">复位</button>
+       <span style="width:1px;height:22px;background:var(--lightblue)"></span>
+       <button class="vtool-btn" onclick="vExport('${a.id}')">导出图</button>
+       <button class="vtool-btn" onclick="vPrint('${a.id}')">打印</button>
+     </div>
+     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:4px 0">
+       <div class="grp" style="color:var(--subtle);font-size:12px">牙位 / 部位
+         <input type="text" id="vRegion" value="${a.toothRegion||''}" placeholder="如 46 或 右下后牙区" style="height:30px;border:1px solid var(--lightblue);border-radius:8px;padding:0 8px;width:150px">
+       </div>
+       <span class="tiny" id="vCalibTip">${a.calib?'✓ 已定标，测距显示真实 mm':'未定标：测距为像素示意，点「定标」用已知长度标定'}</span>
+     </div>
+     <div class="field" style="margin:6px 0 4px"><label>患者说明（一句人话）</label><textarea id="vCap">${a.caption||RADIO_CAP}</textarea></div>
+     <label class="toggle"><input type="checkbox" id="vInc" ${a.includeInReport?'checked':''}> 纳入报告</label>
+     <div class="tiny" style="margin-top:4px">定标：点「定标」后在影像上点两点（已知真实长度），输入 mm 即可；之后测距显示 mm、测角显示度数。标注请在不旋转状态下进行更准。</div>
+   </div>
+ </div>
+ <div class="modal-ft"><button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="delAsset('${a.id}')">删除</button>
+   <button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+   <button class="btn btn-primary btn-sm" onclick="saveViewer('${a.id}')">保存</button></div>`;}
+function initViewer(a){
+  const img=document.getElementById('vimg'),cv=document.getElementById('voverlay'),stage=document.getElementById('vstage');
+  const setup=()=>{const w=img.clientWidth||img.naturalWidth,h=img.clientHeight||img.naturalHeight;
+    cv.width=w;cv.height=h;a._dispW=w;a._dispH=h;applyVAdjust(a);applyVTransform();redrawOverlay(a);};
+  if(img.complete&&img.clientWidth)setup();else img.addEventListener('load',setup);
+  const toXY=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*cv.width,y:(e.clientY-r.top)/r.height*cv.height};};
+  let dragging=false,last=null;
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+    if(VS.mode==='pen'){VS.cur=[toXY(e)];a.annos.push(VS.cur);redrawOverlay(a);}
+    else if(VS.mode==='measure'||VS.mode==='calib'){VS.pts.push(toXY(e));
+      if(VS.pts.length===2){const A=VS.pts[0],B=VS.pts[1];const dl=Math.hypot(B.x-A.x,B.y-A.y);
+        if(VS.mode==='calib'){const v=prompt('这两点的真实长度是多少 mm？（如已知牙冠宽度或标定尺）','');const mm=parseFloat(v);
+          if(mm>0){a.calib=mm/natLen(a,dl);document.getElementById('vCalibTip').textContent='✓ 已定标，测距显示真实 mm';}}
+        else a.measures.push({type:'len',a:A,b:B});
+        VS.pts=[];}redrawOverlay(a);}
+    else if(VS.mode==='angle'){VS.pts.push(toXY(e));
+      if(VS.pts.length===3){a.measures.push({type:'angle',a:VS.pts[0],b:VS.pts[1],c:VS.pts[2]});VS.pts=[];}redrawOverlay(a);}
+    else{dragging=true;last={x:e.clientX,y:e.clientY};}});
+  cv.addEventListener('pointermove',e=>{
+    if(VS.mode==='pen'&&VS.cur){VS.cur.push(toXY(e));redrawOverlay(a);}
+    else if(dragging){VS.px+=e.clientX-last.x;VS.py+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};applyVTransform();}});
+  cv.addEventListener('pointerup',()=>{dragging=false;VS.cur=null;});
+  cv.addEventListener('pointercancel',()=>{dragging=false;VS.cur=null;});
+  stage.addEventListener('wheel',e=>{e.preventDefault();VS.scale=Math.min(6,Math.max(.5,VS.scale*(e.deltaY<0?1.1:.9)));applyVTransform();},{passive:false});}
+function natLen(a,dispLen){const img=document.getElementById('vimg');const nw=img?img.naturalWidth:(a._dispW||1);return dispLen*(nw/(a._dispW||nw));}
+function lenLabel(a,dispLen){return a.calib?(natLen(a,dispLen)*a.calib).toFixed(1)+' mm':Math.round(dispLen)+' px(示意)';}
+function lenLabelBake(a,dispLen,nw){if(a.calib){const nl=dispLen*(nw/(a._dispW||nw));return (nl*a.calib).toFixed(1)+' mm';}return Math.round(dispLen)+' px(示意)';}
+function angleDeg(A,B,C){const a1=Math.atan2(A.y-B.y,A.x-B.x),a2=Math.atan2(C.y-B.y,C.x-B.x);let d=Math.abs(a1-a2)*180/Math.PI;if(d>180)d=360-d;return d;}
+function applyVAdjust(a){const img=document.getElementById('vimg');if(!img)return;
+  img.style.filter=`brightness(${a.adjust.bri}%) contrast(${a.adjust.con}%) ${a.adjust.inv?'invert(1)':''} ${a.adjust.gray?'grayscale(1)':''}`;}
+function applyVTransform(){const inner=document.getElementById('vinner');if(!inner)return;const a=curAsset();
+  inner.style.transform=`translate(${VS.px}px,${VS.py}px) scale(${VS.scale}) rotate(${a.adjust.rot}deg)`;}
+function redrawOverlay(a){const cv=document.getElementById('voverlay');if(!cv)return;const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.strokeStyle='#ff3b30';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
+  (a.annos||[]).forEach(st=>{ctx.beginPath();st.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();});
+  ctx.fillStyle='#ff3b30';ctx.font='13px sans-serif';
+  (a.measures||[]).forEach(m=>{
+    if(m.type==='angle'){ctx.beginPath();ctx.moveTo(m.a.x,m.a.y);ctx.lineTo(m.b.x,m.b.y);ctx.lineTo(m.c.x,m.c.y);ctx.stroke();
+      ctx.fillText(angleDeg(m.a,m.b,m.c).toFixed(0)+'°',m.b.x+6,m.b.y-6);}
+    else{ctx.beginPath();ctx.moveTo(m.a.x,m.a.y);ctx.lineTo(m.b.x,m.b.y);ctx.stroke();
+      const dl=Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y);ctx.fillText(lenLabel(a,dl),(m.a.x+m.b.x)/2+4,(m.a.y+m.b.y)/2-4);}});
+  (VS.pts||[]).forEach(p=>ctx.fillRect(p.x-3,p.y-3,6,6));}
+function vAdj(k,v){const a=curAsset();a.adjust[k]=+v;applyVAdjust(a);}
+function vToggle(k){const a=curAsset();a.adjust[k]=a.adjust[k]?0:1;applyVAdjust(a);
+  document.getElementById(k==='inv'?'vInv':'vGray').classList.toggle('on',!!a.adjust[k]);}
+function vRotate(){const a=curAsset();a.adjust.rot=(a.adjust.rot+90)%360;applyVTransform();}
+function vMode(m){VS.mode=m;VS.pts=[];
+  [['pan','mPan'],['pen','mPen'],['calib','mCalib'],['measure','mMeasure'],['angle','mAngle']].forEach(([x,id])=>document.getElementById(id).classList.toggle('on',x===m));}
+function vClearAnno(){const a=curAsset();a.annos=[];a.measures=[];VS.pts=[];redrawOverlay(a);}
+function vReset(){const a=curAsset();a.adjust={bri:100,con:100,inv:0,gray:0,rot:0};VS.scale=1;VS.px=0;VS.py=0;
+  applyVAdjust(a);applyVTransform();redrawOverlay(a);
+  document.getElementById('vInv').classList.remove('on');document.getElementById('vGray').classList.remove('on');
+  const t=document.querySelector('.vtools');if(t){t.querySelectorAll('input[type=range]').forEach(r=>r.value=100);}}
+function readRegion(a){const el=document.getElementById('vRegion');if(el)a.toothRegion=el.value.trim();}
+function saveViewer(id){const a=cur.assets.find(x=>x.id===id);
+  a.caption=document.getElementById('vCap').value;a.includeInReport=document.getElementById('vInc').checked;readRegion(a);
+  bakeAsset(a).then(()=>{flashSave();closeModal();renderWB();});}
+function vExport(id){const a=cur.assets.find(x=>x.id===id);readRegion(a);bakeAsset(a).then(()=>{
+  const link=document.createElement('a');link.href=a.annotated;link.download=`${RADIO_TYPES[a.radioType]}_${a.toothRegion||''}_${new Date(a.date).toLocaleDateString('zh-CN')}.jpg`;link.click();});}
+function vPrint(id){const a=cur.assets.find(x=>x.id===id);readRegion(a);bakeAsset(a).then(()=>{
+  document.getElementById('printArea').innerHTML=`<div class="report-doc"><div class="rb-banner"><div class="clinic">DentalSpark 口腔诊所</div><div class="h">影像报告 · ${RADIO_TYPES[a.radioType]}</div><div style="opacity:.9">${cur.name}${a.toothRegion?'　牙位 '+a.toothRegion:''}　${new Date(a.date).toLocaleDateString('zh-CN')}</div></div>
+    <div class="rb-sec" style="padding-top:14px;text-align:center"><img src="${a.annotated}" style="max-width:100%;border-radius:8px"></div>
+    <div class="rb-sec"><div class="muted">${a.caption||RADIO_CAP}</div>${a.calib?'<div class="tiny">测量已定标，长度为真实 mm。</div>':'<div class="tiny">测量为像素示意，未定标。</div>'}</div></div>`;
+  window.print();});}
+function bakeAsset(a){return new Promise(res=>{
+  const img=new Image();img.onload=()=>{
+    const nw=img.naturalWidth,nh=img.naturalHeight;const rot=a.adjust.rot%360;const swap=(rot===90||rot===270);
+    const cv=document.createElement('canvas');cv.width=swap?nh:nw;cv.height=swap?nw:nh;const ctx=cv.getContext('2d');
+    ctx.save();ctx.translate(cv.width/2,cv.height/2);ctx.rotate(rot*Math.PI/180);ctx.translate(-nw/2,-nh/2);
+    ctx.filter=`brightness(${a.adjust.bri}%) contrast(${a.adjust.con}%) ${a.adjust.inv?'invert(1)':''} ${a.adjust.gray?'grayscale(1)':''}`;
+    ctx.drawImage(img,0,0,nw,nh);ctx.restore();
+    const sx=nw/(a._dispW||nw),sy=nh/(a._dispH||nh);
+    ctx.save();if(swap){ctx.translate(cv.width/2,cv.height/2);ctx.rotate(rot*Math.PI/180);ctx.translate(-nw/2,-nh/2);}
+    ctx.strokeStyle='#ff3b30';ctx.lineWidth=Math.max(2,nw/320);ctx.lineCap='round';ctx.lineJoin='round';ctx.fillStyle='#ff3b30';ctx.font=`${Math.max(13,nw/55)}px sans-serif`;
+    (a.annos||[]).forEach(st=>{ctx.beginPath();st.forEach((p,i)=>{const X=p.x*sx,Y=p.y*sy;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});ctx.stroke();});
+    (a.measures||[]).forEach(m=>{
+      if(m.type==='angle'){ctx.beginPath();ctx.moveTo(m.a.x*sx,m.a.y*sy);ctx.lineTo(m.b.x*sx,m.b.y*sy);ctx.lineTo(m.c.x*sx,m.c.y*sy);ctx.stroke();
+        ctx.fillText(angleDeg(m.a,m.b,m.c).toFixed(0)+'°',m.b.x*sx+6,m.b.y*sy-6);}
+      else{ctx.beginPath();ctx.moveTo(m.a.x*sx,m.a.y*sy);ctx.lineTo(m.b.x*sx,m.b.y*sy);ctx.stroke();
+        const dl=Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y);ctx.fillText(lenLabelBake(a,dl,nw),(m.a.x+m.b.x)/2*sx+4,(m.a.y+m.b.y)/2*sy-4);}});
+    ctx.restore();
+    a.annotated=cv.toDataURL('image/jpeg',0.85);res();};
+  img.src=a.src;});}
+
+/* ===== 同名牙位多时间点对比 ===== */
+function openRegionCompare(){
+  const radios=cur.assets.filter(a=>a.kind==='radio'&&(a.toothRegion||'').trim());
+  if(radios.length<2){modal(`<div class="modal-hd"><div class="t">同名牙位对比</div></div><div class="modal-bd"><div class="empty">需要至少 2 张已填写「牙位/部位」的牙片。请在阅片器里给牙片填上牙位（如 46）。</div></div><div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">关闭</button></div>`);return;}
+  const regions=[...new Set(radios.map(a=>a.toothRegion.trim()))];
+  window._rc={region:regions[0],left:null,right:null};
+  renderRegionCompare();}
+function rcRegions(){return [...new Set(cur.assets.filter(a=>a.kind==='radio'&&(a.toothRegion||'').trim()).map(a=>a.toothRegion.trim()))];}
+function renderRegionCompare(){
+  const rc=window._rc;const regions=rcRegions();
+  if(!regions.includes(rc.region))rc.region=regions[0];
+  const films=cur.assets.filter(a=>a.kind==='radio'&&a.toothRegion.trim()===rc.region).sort((x,y)=>x.date-y.date);
+  if(rc.left===null||!films.find(f=>f.id===rc.left))rc.left=films[0]&&films[0].id;
+  if(rc.right===null||!films.find(f=>f.id===rc.right))rc.right=films.length?films[films.length-1].id:null;
+  const L=films.find(f=>f.id===rc.left),R=films.find(f=>f.id===rc.right);
+  const strip=films.map(f=>`<div onclick="rcPick('${f.id}')" style="cursor:pointer;text-align:center">
+      <img src="${f.annotated||f.src}" style="width:84px;height:84px;object-fit:cover;border-radius:8px;background:#111;border:3px solid ${f.id===rc.left?'var(--deep)':f.id===rc.right?'var(--teal)':'transparent'}">
+      <div class="tiny">${new Date(f.date).toLocaleDateString('zh-CN')}</div></div>`).join('');
+  modal(`<div class="modal-hd"><div class="t">同名牙位多时间点对比</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>牙位 / 部位</label><select onchange="_rc.region=this.value;_rc.left=null;_rc.right=null;renderRegionCompare()">${regions.map(r=>`<option ${r===rc.region?'selected':''}>${r}</option>`).join('')}</select></div>
+     ${L&&R?`<div class="ba" data-ba><img class="before" src="${L.annotated||L.src}"><img class="after" src="${R.annotated||R.src}">
+        <div class="balabel l-before">${new Date(L.date).toLocaleDateString('zh-CN')}</div>
+        <div class="balabel l-after">${new Date(R.date).toLocaleDateString('zh-CN')}</div>
+        <div class="handle"></div><div class="knob">⇄</div></div>
+        <div class="tiny" style="margin-top:6px;text-align:center">拖动查看同一牙位随时间的变化　·　左：深蓝框　右：青框（点下方缩略图切换）</div>`:''}
+     <div style="display:flex;gap:10px;overflow:auto;margin-top:12px">${strip}</div>
+   </div>
+   <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">关闭</button></div>`);
+  bindBA();}
+function rcPick(id){const rc=window._rc;if(rc.left===id||rc.right===id)return;
+  rc.right=rc.left;rc.left=id;renderRegionCompare();}
+
+/* ===== DentaView 对接 ===== */
+let dvWin=null;
+function dvOpen(){
+  try{dvWin=window.open('dentaview.html','dentaview');}catch(e){dvWin=null;}
+  if(!dvWin){alert('无法打开 DentaView。请确认：①已允许弹出窗口；②dentaview.html 与本页在同一目录。\n\n也可在 DentaView 里点「截图」存成 PNG，再用「导入 DentaView 截图」导入。');return;}
+  flashSave();
+}
+function dvReceive(dataUrl,pname){
+  if(!cur){alert('请先进入一个病例，再从 DentaView 发送截图。');return;}
+  const a={id:nid(),src:dataUrl,kind:'radio',radioType:'cbct',date:Date.now(),
+    caption:'这是从 DentaView 调入的 CBCT 影像，红色为医生标注。',includeInReport:true,toothRegion:'',
+    adjust:{bri:100,con:100,inv:0,gray:0,rot:0},annos:[],measures:[],calib:null,annotated:null};
+  cur.assets.push(a);flashSave();
+  tab='media';mediaMode='radio';renderRail();renderWB();
+  try{window.focus();}catch(e){}
+  openViewer(a.id);
+}
+window.addEventListener('message',e=>{
+  const d=e.data;
+  if(d&&d.type==='dentaview-shot'&&d.dataUrl){dvReceive(d.dataUrl,d.pname||'');}
+});
+
+/* before/after */
+function compareHTML(){
+  if(!cur.comparisons.length)return `<div class="empty">还没有对比。在右侧点「新建对比」，选一张术前、一张术后。</div>`;
+  return cur.comparisons.map(p=>{const b=cur.assets.find(a=>a.id===p.before),af=cur.assets.find(a=>a.id===p.after);
+    if(!b||!af)return '';
+    return `<div class="card" style="margin-bottom:16px"><div class="card-body">
+      <div class="row" style="margin-bottom:8px"><b>${p.title}</b><span style="flex:1"></span>
+        <button class="btn btn-danger btn-sm" onclick="delCompare('${p.id}')">删除</button></div>
+      <div class="ba" data-ba><img class="before" src="${b.src}"><img class="after" src="${af.src}">
+        <div class="balabel l-before">术前</div><div class="balabel l-after">${p.simulation?'术后（模拟）':'术后'}</div>
+        <div class="handle"></div><div class="knob">⇄</div></div>
+      ${p.caption?`<div class="muted" style="margin-top:8px">${p.caption}</div>`:''}
+      ${p.simulation?`<div class="tiny" style="margin-top:4px">注：术后为效果模拟，最终以实际治疗为准。</div>`:''}
+    </div></div>`;}).join('');}
+function bindBA(){document.querySelectorAll('[data-ba]').forEach(el=>{
+  const after=el.querySelector('.after'),handle=el.querySelector('.handle'),knob=el.querySelector('.knob');
+  let f=0.5;const set=x=>{f=Math.max(0,Math.min(1,x));after.style.clipPath=`inset(0 0 0 ${f*100}%)`;
+    handle.style.left=(f*100)+'%';knob.style.left=(f*100)+'%';};
+  set(0.5);
+  const move=e=>{const r=el.getBoundingClientRect();const cx=(e.touches?e.touches[0].clientX:e.clientX);set((cx-r.left)/r.width);};
+  const down=e=>{move(e);const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);};
+  el.addEventListener('pointerdown',down);});}
+function delCompare(id){cur.comparisons=cur.comparisons.filter(p=>p.id!==id);flashSave();renderWB();bindBA();}
+
+/* ============ 报告 ============ */
+function reportTabHTML(){
+  const list=[...cur.reports].reverse();
+  let html=`<div class="row" style="margin-bottom:14px"><h3 style="margin:0">沟通报告</h3><span style="flex:1"></span>
+    <button class="btn btn-secondary btn-sm" onclick="openReport()">＋ 新建报告</button></div>`;
+  if(!list.length)html+=`<div class="empty">还没有生成报告，点右上「新建报告」开始。</div>`;
+  else html+=list.map(r=>`<div class="card card-accent" style="margin-bottom:10px"><div class="bar" style="background:var(--green)"></div>
+    <div class="card-body"><div class="row"><b>${new Date(r.at).toLocaleString('zh-CN')}</b><span style="flex:1"></span>
+    <button class="btn btn-ghost btn-sm" onclick="showReportDoc('${r.id}')">查看 / 打印</button></div>
+    <div class="row tiny" style="gap:6px;margin-top:4px">
+      <span class="chip" style="height:22px;font-size:11px">${r.redact?'已脱敏':'含信息'}</span>
+      <span class="chip" style="height:22px;font-size:11px">${r.patientSigned?'患者已签':'患者未签'}</span>
+      <span class="chip" style="height:22px;font-size:11px">${r.doctorSigned?'医生已签':'医生未签'}</span></div>
+    </div></div>`).join('');
+  return html;}
+
+/* ============ 模态 ============ */
+function closeModal(){document.getElementById('modalRoot').innerHTML='';}
+function modal(html){document.getElementById('modalRoot').innerHTML=`<div class="scrim" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;}
+
+function openNewCase(){
+  modal(`<div class="modal-hd"><div class="t">新建病例</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>患者姓名</label><input type="text" id="ncName" placeholder="患者姓名"></div>
+     <div class="field"><label>性别</label><select id="ncGender"><option>女</option><option>男</option><option>其他</option></select></div>
+     <div class="field"><label>病例分类</label><select id="ncCat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+   </div>
+   <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="createCase()">创建</button></div>`);}
+function createCase(){const name=document.getElementById('ncName').value.trim()||'新患者';
+  const c={id:nid(),name,gender:document.getElementById('ncGender').value,category:document.getElementById('ncCat').value,
+    status:'inProgress',updated:Date.now(),findings:[],assets:[],comparisons:[],reports:[]};
+  cases.unshift(c);closeModal();renderCases();}
+
+/* finding editor */
+let editId=null;
+function addFinding(){editId=null;openFindingEditor({id:nid(),fdi:selTooth,problem:'caries',surfaces:[],severity:'moderate',
+  treatment:optionsFor('caries')[1],colorTag:'filling',confirmed:false,pocket:0,bleeding:false,mobility:'none',patientExplanation:''});}
+function editFinding(id){editId=id;openFindingEditor(JSON.parse(JSON.stringify(cur.findings.find(f=>f.id===id))));}
+let draft=null;
+function openFindingEditor(f){draft=f;renderFindingEditor();}
+function renderFindingEditor(){const f=draft;const opts=optionsFor(f.problem);
+  if(!opts.includes(f.treatment))f.treatment=opts[0];
+  f.colorTag=f.treatment?tColor(f.treatment):PROBLEM_DEFAULT_COLOR[f.problem];
+  let detail='';
+  if(['caries','defect','restorationFailure'].includes(f.problem)){
+    detail=`<div class="field"><label>病损面</label><div class="surfaces">`+
+      Object.entries(SURFACES).map(([k,v])=>`<span class="sfc ${f.surfaces.includes(k)?'on':''}" onclick="toggleSurface('${k}')">${v}</span>`).join('')+`</div></div>
+      <div class="field"><label>严重程度</label><select onchange="draft.severity=this.value;renderFindingEditor()">${Object.entries(SEV).map(([k,v])=>`<option value="${k}" ${f.severity===k?'selected':''}>${v}</option>`).join('')}</select></div>`;
+  }else if(f.problem==='perio'){
+    detail=`<div class="field"><label>牙周袋 (mm)：${f.pocket||0}</label><input type="range" min="0" max="12" value="${f.pocket||0}" style="width:100%" oninput="draft.pocket=+this.value;renderFindingEditor()"></div>
+      <div class="field"><label class="toggle"><input type="checkbox" ${f.bleeding?'checked':''} onchange="draft.bleeding=this.checked;renderFindingEditor()"> 探诊出血</label></div>
+      <div class="field"><label>松动度</label><select onchange="draft.mobility=this.value;renderFindingEditor()">${Object.entries(MOBILITY).map(([k,v])=>`<option value="${k}" ${f.mobility===k?'selected':''}>${v}</option>`).join('')}</select></div>`;
+  }else if(f.problem==='impacted'){
+    const sel=(obj,key,cur)=>`<select onchange="draft.${key}=this.value||null;renderFindingEditor()"><option value="">未评估</option>${Object.entries(obj).map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${v}</option>`).join('')}</select>`;
+    detail=`<div class="field"><label>阻生类型</label>${sel(IMPACTION,'impaction',f.impaction)}</div>
+      <div class="field"><label>神经管 / 上颌窦关系</label>${sel(NERVE,'nerve',f.nerve)}</div>
+      <div class="field"><label>拔除难度</label>${sel(DIFF,'difficulty',f.difficulty)}</div>`;
+  }
+  modal(`<div class="modal-hd"><div class="t">${f.fdi} 牙 · 治疗卡片</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>问题类型</label><select onchange="draft.problem=this.value;renderFindingEditor()">${Object.entries(PROBLEMS).map(([k,v])=>`<option value="${k}" ${f.problem===k?'selected':''}>${v}</option>`).join('')}</select></div>
+     ${detail}
+     <div class="field"><label>治疗建议（建议范围，由医生确认）</label><select onchange="draft.treatment=this.value;renderFindingEditor()">${opts.map(t=>`<option value="${t}" ${f.treatment===t?'selected':''}>${tName(t)}</option>`).join('')}</select></div>
+     <div class="field"><label class="toggle"><input type="checkbox" ${f.confirmed?'checked':''} onchange="draft.confirmed=this.checked"> 医生已确认</label></div>
+     <div class="field"><label>沟通预览</label>
+       <div class="preview-line"><div class="k">医生语言</div>${doctorText(f)}</div>
+       <div class="preview-line"><div class="k">患者语言 <button class="btn-ghost" style="font-size:12px" onclick="draft.patientExplanation=patientText(draft);renderFindingEditor()">↻ 重新生成</button></div>
+         <textarea oninput="draft.patientExplanation=this.value">${f.patientExplanation||patientText(f)}</textarea></div>
+     </div>
+   </div>
+   <div class="modal-ft">
+     ${editId?`<button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="deleteFinding()">删除</button>`:''}
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="saveFinding()">保存</button></div>`);}
+function toggleSurface(k){const i=draft.surfaces.indexOf(k);if(i>=0)draft.surfaces.splice(i,1);else draft.surfaces.push(k);renderFindingEditor();}
+function saveFinding(){const i=cur.findings.findIndex(f=>f.id===draft.id);
+  if(i>=0)cur.findings[i]=draft;else cur.findings.push(draft);flashSave();closeModal();renderWB();}
+function deleteFinding(){cur.findings=cur.findings.filter(f=>f.id!==draft.id);flashSave();closeModal();renderWB();}
+
+/* asset editor */
+function editAsset(id){const a=cur.assets.find(x=>x.id===id);
+  modal(`<div class="modal-hd"><div class="t">影像详情 · ${SOURCES[a.source]}</div></div>
+   <div class="modal-bd">
+     <img src="${a.src}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;background:#000">
+     <div class="field" style="margin-top:14px"><label>患者说明（一句人话）</label>
+       <textarea id="aCap">${a.caption||SOURCE_CAP[a.source]}</textarea></div>
+     <div class="field"><label class="toggle"><input type="checkbox" id="aInc" ${a.includeInReport?'checked':''}> 纳入报告</label></div>
+   </div>
+   <div class="modal-ft"><button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="delAsset('${id}')">删除影像</button>
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="saveAsset('${id}')">保存</button></div>`);}
+function saveAsset(id){const a=cur.assets.find(x=>x.id===id);a.caption=document.getElementById('aCap').value;
+  a.includeInReport=document.getElementById('aInc').checked;flashSave();closeModal();renderWB();}
+function delAsset(id){cur.assets=cur.assets.filter(x=>x.id!==id);cur.comparisons=cur.comparisons.filter(p=>p.before!==id&&p.after!==id);flashSave();closeModal();renderWB();}
+
+/* new comparison */
+function newCompare(){let before=cur.assets[0].id,after=cur.assets[1].id,sim=false,title='术前 / 术后对比',cap='';
+  const pick=(role,val)=>cur.assets.map(a=>`<img src="${a.src}" onclick="cmpPick('${role}','${a.id}')" style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid ${val===a.id?'var(--blue)':'transparent'}">`).join('');
+  window._cmp={before,after,sim,title,cap};
+  const render=()=>{const c=window._cmp;
+    modal(`<div class="modal-hd"><div class="t">术前 / 术后对比</div></div>
+     <div class="modal-bd">
+       <div class="field"><label>标题</label><input type="text" value="${c.title}" oninput="_cmp.title=this.value"></div>
+       <div class="field"><label class="toggle"><input type="checkbox" ${c.sim?'checked':''} onchange="_cmp.sim=this.checked"> 术后为效果模拟</label></div>
+       <div class="field"><label>选择术前照片</label><div style="display:flex;gap:8px;flex-wrap:wrap">${pick('before',c.before)}</div></div>
+       <div class="field"><label>选择术后照片</label><div style="display:flex;gap:8px;flex-wrap:wrap">${pick('after',c.after)}</div></div>
+       <div class="field"><label>患者说明</label><textarea oninput="_cmp.cap=this.value" placeholder="例如：贴面后牙齿更整齐、更白（效果示意）">${c.cap}</textarea></div>
+     </div>
+     <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+       <button class="btn btn-primary btn-sm" ${c.before===c.after?'disabled style=opacity:.5':''} onclick="saveCompare()">保存</button></div>`);};
+  window._cmpRender=render;render();}
+function cmpPick(role,id){window._cmp[role]=id;window._cmpRender();}
+function saveCompare(){const c=window._cmp;cur.comparisons.push({id:nid(),title:c.title,before:c.before,after:c.after,simulation:c.sim,caption:c.cap,includeInReport:true});
+  flashSave();closeModal();renderWB();bindBA();}
+
+/* report generate */
+let sigPatient=null,sigDoctor=null,reportRedact=false;
+function openReport(){sigPatient=null;sigDoctor=null;reportRedact=false;
+  const problems=cur.findings.map(f=>({txt:patientDisplay(f),hex:cvar(f.colorTag),confirmed:f.confirmed}));
+  const imgs=cur.assets.filter(a=>a.includeInReport);
+  const cmps=cur.comparisons.filter(p=>p.includeInReport).map(p=>({...p,b:cur.assets.find(a=>a.id===p.before),a:cur.assets.find(a=>a.id===p.after)})).filter(p=>p.b&&p.a);
+  const plan=buildTimeline(cur).filter(s=>s.active);
+  modal(`<div class="modal-hd"><div class="t">生成沟通报告</div><span style="flex:1"></span></div>
+   <div class="modal-bd">
+     <div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--blue)"></div><div class="card-body">
+       <b>报告预览（患者语言）</b>
+       <div style="font-weight:600;color:var(--blue);margin:6px 0">${cur.name}${reportRedact?'':` · ${cur.gender}`}</div>
+       <div style="font-weight:600;margin-top:6px">口腔现状总览</div>
+       ${problems.length?problems.map(p=>`<div class="rb-li"><span class="dot" style="background:${p.hex};margin-top:4px"></span><span>${p.txt}${p.confirmed?'':'（待医生确认）'}</span></div>`).join(''):'<div class="muted">未标记需处理的问题。</div>'}
+     </div></div>
+     ${imgs.length?`<div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--purple)"></div><div class="card-body"><b>影像与照片（${imgs.length} 张）</b>
+       <div class="rb-imgs" style="margin-top:8px">${imgs.map(a=>`<img src="${a.annotated||a.src}">`).join('')}</div></div></div>`:''}
+     ${cmps.length?`<div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--rose)"></div><div class="card-body"><b>术前 / 术后对比（${cmps.length} 组）</b>
+       ${cmps.map(p=>`<div class="rb-cmp"><figure><img src="${p.b.src}"><figcaption>术前</figcaption></figure><figure><img src="${p.a.src}"><figcaption>${p.simulation?'术后（模拟）':'术后'}</figcaption></figure></div>`).join('')}</div></div>`:''}
+     <div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--orange)"></div><div class="card-body">
+       <label class="toggle"><input type="checkbox" onchange="reportRedact=this.checked"> <b>导出前隐藏患者敏感信息</b></label>
+       <div class="muted" style="margin-top:6px">本报告用于医患沟通与方案展示，不替代正式诊断；治疗方案均为建议范围，以医生确认为准。</div></div></div>
+     <div class="card card-accent"><div class="bar" style="background:var(--green)"></div><div class="card-body">
+       <b>沟通确认签字</b>
+       <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+         <div><div class="muted">患者签字</div><canvas id="sigP" width="280" height="120" class="sig-pad"></canvas><br><button class="btn-ghost" style="font-size:12px" onclick="clearSig('P')">清除</button></div>
+         <div><div class="muted">医生签字</div><canvas id="sigD" width="280" height="120" class="sig-pad"></canvas><br><button class="btn-ghost" style="font-size:12px" onclick="clearSig('D')">清除</button></div>
+       </div></div></div>
+   </div>
+   <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">关闭</button>
+     <button class="btn btn-primary btn-sm" onclick="generateReport()">生成报告</button></div>`);
+  initSig('sigP',v=>sigPatient=v);initSig('sigD',v=>sigDoctor=v);}
+function initSig(id,onEnd){const cv=document.getElementById(id),ctx=cv.getContext('2d');
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--deep');ctx.lineWidth=2.2;ctx.lineCap='round';
+  let drawing=false,has=false;
+  const pos=e=>{const r=cv.getBoundingClientRect();const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top;return[x,y];};
+  cv.addEventListener('pointerdown',e=>{drawing=true;has=true;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y);});
+  cv.addEventListener('pointermove',e=>{if(!drawing)return;const[x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke();});
+  window.addEventListener('pointerup',()=>{if(drawing){drawing=false;if(has)onEnd(cv.toDataURL());}});
+  cv._clear=()=>{ctx.clearRect(0,0,cv.width,cv.height);has=false;onEnd(null);};}
+function clearSig(w){document.getElementById(w==='P'?'sigP':'sigD')._clear();}
+function generateReport(){const rec={id:nid(),at:Date.now(),redact:reportRedact,patientSigned:!!sigPatient,doctorSigned:!!sigDoctor,
+    sigP:sigPatient,sigD:sigDoctor};
+  cur.reports.push(rec);flashSave();closeModal();
+  showReportDoc(rec.id);}
+
+function showReportDoc(id){const r=cur.reports.find(x=>x.id===id);
+  const problems=cur.findings.map(f=>({txt:patientDisplay(f),hex:cvar(f.colorTag),confirmed:f.confirmed}));
+  const imgs=cur.assets.filter(a=>a.includeInReport);
+  const cmps=cur.comparisons.filter(p=>p.includeInReport).map(p=>({...p,b:cur.assets.find(a=>a.id===p.before),a:cur.assets.find(a=>a.id===p.after)})).filter(p=>p.b&&p.a);
+  const plan=buildTimeline(cur).filter(s=>s.active);
+  const doc=`<div class="report-doc">
+    <div class="rb-banner"><div class="clinic">DentalSpark 口腔诊所</div><div class="h">口腔治疗沟通报告</div>
+      <div style="opacity:.9">${cur.name}${r.redact?'（已隐藏敏感信息）':'  '+cur.gender}</div></div>
+    <div class="rb-sec" style="padding-top:14px"><div class="muted">生成日期：${new Date(r.at).toLocaleDateString('zh-CN')}　主诊医生：主诊医生</div></div>
+    <div class="rb-sec"><h3>口腔现状总览</h3>
+      ${problems.length?problems.map(p=>`<div class="rb-li"><span class="dot" style="background:${p.hex};margin-top:4px"></span><span>${p.txt}${p.confirmed?'':'（待医生确认）'}</span></div>`).join(''):'<div class="muted">未标记需处理的问题。</div>'}</div>
+    ${imgs.length?`<div class="rb-sec"><h3>影像与照片</h3><div class="rb-imgs">${imgs.map(a=>`<div><img src="${a.annotated||a.src}"><div class="tiny" style="width:160px">${sourceLabel(a)}：${assetCap(a)}</div></div>`).join('')}</div></div>`:''}
+    ${cmps.length?`<div class="rb-sec"><h3>术前 / 术后对比</h3>${cmps.map(p=>`<div><b style="font-size:13px">${p.title}</b><div class="rb-cmp"><figure><img src="${p.b.src}"><figcaption>术前</figcaption></figure><figure><img src="${p.a.src}"><figcaption>${p.simulation?'术后（模拟）':'术后'}</figcaption></figure></div>${p.caption?`<div class="tiny">${p.caption}${p.simulation?'（术后为效果模拟）':''}</div>`:''}</div>`).join('')}</div>`:''}
+    ${plan.length?`<div class="rb-sec"><h3>治疗计划时间轴（估算，以面诊为准）</h3>${plan.map(s=>`<div style="margin:6px 0"><b style="font-size:13px">${s.title}</b>${s.items.length?s.items.map(i=>`<div class="rb-li"><span>· ${i.patient}</span></div>`).join('')+`<div class="tiny">预计 ${s.visits} 次 · 约 ${s.weeks} 周</div>`:`<div class="muted">${s.note}</div>`}</div>`).join('')}</div>`:''}
+    <div class="rb-sec"><h3>风险提示与术后医嘱</h3>
+      <div class="rb-li"><span>· 未及时治疗可能导致病情进展；具体风险、效果与费用以面诊及知情同意书为准。</span></div>
+      <div class="rb-li"><span>· 保持口腔卫生、按医嘱复诊，出现明显不适及时联系诊所。</span></div></div>
+    <div class="rb-sec"><h3>沟通确认与签字</h3>
+      <div class="muted">本报告用于医患沟通与治疗方案展示，不替代正式诊断；所列治疗方案均为建议范围，以医生最终确认为准。</div>
+      <div class="rb-sign"><div class="box"><span>患者签字</span>${r.sigP?`<img src="${r.sigP}">`:''}</div>
+        <div class="box"><span>医生签字</span>${r.sigD?`<img src="${r.sigD}">`:''}</div></div>
+      <div class="tiny" style="margin-top:6px">日期：${new Date(r.at).toLocaleDateString('zh-CN')}</div></div>
+  </div>`;
+  modal(`<div class="modal-hd"><div class="t">沟通报告</div><span style="flex:1"></span>
+      <button class="btn btn-secondary btn-sm" onclick="printReport()">打印 / 存为 PDF</button></div>
+    <div class="modal-bd" style="background:#f0f3f7">${doc}</div>`);
+  document.getElementById('printArea').innerHTML=doc;}
+function printReport(){window.print();}
+
+/* ============ init ============ */
+function unlock(){document.getElementById('lock').classList.add('hidden');
+  document.getElementById('caseCenter').classList.remove('hidden');renderFilters();renderCases();}
+function resetDemo(){cases=seed();uid=1000;renderCases();}
+document.getElementById('langSel').addEventListener('change',renderWB);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>

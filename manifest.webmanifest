@@ -1,0 +1,17 @@
+{
+  "name": "DentalSpark 口腔椅旁沟通系统",
+  "short_name": "DentalSpark",
+  "description": "iPad 椅旁医患沟通：牙位标记、双语话术、影像与阅片、术前术后对比、签字报告，并与 DentaView 联动。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0B1F3A",
+  "theme_color": "#0B1F3A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

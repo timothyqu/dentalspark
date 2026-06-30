@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DentaView Pro · CBCT 种植 / 正畸规划工作站</title>
+<meta name="application-name" content="DentaView Pro">
+<meta name="apple-mobile-web-app-title" content="DentaView Pro">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e14">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+<style>
+  :root{
+    --bg:#0a0e14;--panel:#10161f;--panel-2:#161e29;--line:#243140;
+    --ink:#e6edf3;--ink-dim:#8b9aab;--ink-faint:#5a6b7d;
+    --teal:#2dd4bf;--teal-dim:#0f766e;--amber:#fbbf24;--rose:#fb7185;
+    --blue:#60a5fa;--green:#4ade80;--violet:#a78bfa;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --mono:'SF Mono',ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:#33455a}
+  .app{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+  .hidden{display:none!important}
+
+  /* top bar */
+  .topbar{display:flex;align-items:center;gap:16px;padding:9px 16px;background:linear-gradient(180deg,#10161f,#0c1119);border-bottom:1px solid var(--line);z-index:30}
+  .brand{display:flex;align-items:center;gap:10px;user-select:none}
+  .brand .mark{width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 30% 30%,#2dd4bf,#0f766e);box-shadow:0 0 0 1px rgba(45,212,191,.3),0 4px 12px rgba(45,212,191,.25)}
+  .brand h1{font-size:15px;font-weight:700;letter-spacing:.3px}
+  .brand h1 span{color:var(--teal)}
+  .brand .tag{font-size:9.5px;color:var(--ink-faint);font-family:var(--mono);letter-spacing:.4px;margin-top:1px}
+  .divider{width:1px;height:26px;background:var(--line)}
+  .spacer{flex:1}
+  .group{display:flex;align-items:center;gap:6px}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:7px;font-size:12px;font-weight:500;transition:.13s;white-space:nowrap}
+  .btn:hover{border-color:#35506a;background:#1b2632}
+  .btn.primary{background:linear-gradient(180deg,#16a394,#0f766e);border-color:#14b8a6;color:#021412;font-weight:600}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn svg{width:15px;height:15px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.sm{padding:5px 9px;font-size:11px}
+
+  .modetab{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .modetab button{padding:8px 15px;background:transparent;border:none;color:var(--ink-dim);font-size:12px;font-weight:600;transition:.13s;display:flex;align-items:center;gap:6px}
+  .modetab button svg{width:14px;height:14px}
+  .modetab button.on{background:var(--teal-dim);color:#d7fff8}
+  .modetab button:not(.on):hover{color:var(--ink);background:#1b2632}
+
+  /* body */
+  .body{display:grid;grid-template-columns:260px 1fr;min-height:0}
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+  .sec{border-bottom:1px solid var(--line);padding:13px 14px 15px}
+  .sec h2{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink-faint);font-weight:700;margin-bottom:10px;font-family:var(--mono);display:flex;justify-content:space-between;align-items:center}
+  .sec h2 .hl{color:var(--teal)}
+
+  .tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tool{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 6px;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;color:var(--ink-dim);font-size:10.5px;font-weight:600;transition:.12s;text-align:center}
+  .tool svg{width:18px;height:18px;stroke-width:1.7}
+  .tool:hover{border-color:#35506a;color:var(--ink)}
+  .tool.on{background:rgba(45,212,191,.12);border-color:var(--teal);color:var(--teal)}
+
+  .preset-row{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:5px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;color:var(--ink-dim);font-size:11px;font-weight:600;transition:.12s}
+  .chip:hover{border-color:#35506a;color:var(--ink)}
+  .chip.on{background:var(--teal-dim);border-color:var(--teal);color:#d7fff8}
+
+  .wl-readout{display:flex;gap:14px;margin-top:10px;font-family:var(--mono);font-size:11px}
+  .wl-readout div span{color:var(--ink-faint);margin-right:5px}
+  .wl-readout div b{color:var(--teal);font-weight:600}
+  .slider-row{margin-top:9px}
+  .slider-row label{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-faint);font-family:var(--mono);margin-bottom:4px}
+  input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--line);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--teal);cursor:pointer;box-shadow:0 0 0 3px rgba(45,212,191,.18)}
+
+  .field{margin-top:9px}
+  .field label{font-size:10px;color:var(--ink-faint);font-family:var(--mono);display:block;margin-bottom:4px}
+  select,.numbox{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:7px 8px;font-family:var(--mono);font-size:12px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+  .meta dl{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:11px}
+  .meta dt{color:var(--ink-faint);font-family:var(--mono);font-size:10px}
+  .meta dd{color:var(--ink);text-align:right;font-family:var(--mono);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .mlist{display:flex;flex-direction:column;gap:5px;max-height:170px;overflow-y:auto}
+  .mlist .empty,.lmk-empty{font-size:11px;color:var(--ink-faint);text-align:center;padding:12px 0;font-style:italic}
+  .mrow{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;font-size:11px}
+  .mrow .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .mrow .lbl{flex:1;color:var(--ink-dim);font-size:10px}
+  .mrow .val{font-family:var(--mono);font-weight:700;color:var(--ink)}
+  .mrow .del{color:var(--ink-faint);font-size:14px;line-height:1;padding:0 2px}
+  .mrow .del:hover{color:var(--rose)}
+
+  /* implant cards */
+  .imp-card{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:9px;margin-top:7px}
+  .imp-card.sel{border-color:var(--violet);box-shadow:0 0 0 1px rgba(167,139,250,.3)}
+  .imp-card .top{display:flex;justify-content:space-between;align-items:center;font-size:11px}
+  .imp-card .nm{font-weight:700;color:var(--violet)}
+  .imp-card .spec{font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:4px}
+  .imp-card .safe{font-family:var(--mono);font-size:10px;margin-top:3px}
+  .imp-card .safe.ok{color:var(--green)} .imp-card .safe.warn{color:var(--amber)} .imp-card .safe.bad{color:var(--rose)}
+  .imp-card .del{float:right;color:var(--ink-faint);cursor:pointer} .imp-card .del:hover{color:var(--rose)}
+
+  /* ceph analysis table */
+  .ceph-tbl{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono)}
+  .ceph-tbl th{text-align:left;color:var(--ink-faint);font-size:9px;text-transform:uppercase;letter-spacing:.5px;padding:3px 4px;border-bottom:1px solid var(--line)}
+  .ceph-tbl td{padding:4px;border-bottom:1px solid rgba(36,49,64,.5)}
+  .ceph-tbl .v{font-weight:700;text-align:right}
+  .ceph-tbl .st{text-align:center;font-size:9px}
+  .ceph-tbl .st.ok{color:var(--green)} .ceph-tbl .st.hi{color:var(--rose)} .ceph-tbl .st.lo{color:var(--amber)}
+  .lmk-grid{display:flex;flex-wrap:wrap;gap:5px}
+  .lmk{padding:4px 8px;border:1px solid var(--line);border-radius:5px;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);background:var(--panel-2)}
+  .lmk.done{border-color:var(--green);color:var(--green)}
+  .lmk.active{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 1px rgba(251,191,36,.3)}
+
+  /* stage */
+  .stage{position:relative;background:#05080c;min-height:0;overflow:hidden}
+  .layout{position:absolute;inset:0;display:none;padding:3px;gap:3px}
+  .layout.on{display:grid}
+  #mprGrid{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  #implantLayout{grid-template-columns:300px 1fr;grid-template-rows:60% 40%;grid-template-areas:"pano pano" "axial cross"}
+  #cephLayout{grid-template-columns:1fr}
+  .pane{position:relative;background:#000;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .pane.active{border-color:var(--teal);box-shadow:inset 0 0 0 1px rgba(45,212,191,.4)}
+  .pane canvas{display:block;position:absolute;inset:0;width:100%;height:100%}
+  .pane .label{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.5);z-index:5}
+  .pane .corner{position:absolute;bottom:6px;right:8px;font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;z-index:5}
+  .pane .corner.bl{right:auto;left:8px;color:var(--ink-faint)}
+  .pane-max{position:absolute;top:5px;right:7px;z-index:7;width:25px;height:25px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:rgba(0,0,0,.5);border:1px solid var(--line);color:var(--ink-dim);cursor:pointer;transition:.12s;opacity:0}
+  .pane:hover .pane-max,.pane.maximized .pane-max{opacity:1}
+  .pane-max:hover{color:var(--teal);border-color:var(--teal);background:rgba(0,0,0,.75)}
+  .pane-max svg{width:14px;height:14px;stroke-width:2;fill:none}
+  .pane-max .ic-restore{display:none}
+  .pane.maximized{position:absolute!important;inset:3px!important;grid-area:1 / 1 / -1 / -1!important;width:auto!important;height:auto!important;z-index:48;border-color:var(--teal)}
+  .pane.maximized .pane-max{color:var(--teal);border-color:var(--teal)}
+  .pane.maximized .pane-max .ic-expand{display:none}
+  .pane.maximized .pane-max .ic-restore{display:block}
+  .c-axial .label{color:var(--teal)} .c-coronal .label{color:var(--amber)} .c-sagittal .label{color:var(--rose)}
+  .c-pano .label{color:var(--green)} .c-cross .label{color:var(--violet)} .c-ceph .label{color:var(--blue)} .c-arch .label{color:var(--teal)}
+  #paneArch{grid-area:axial} #paneCross{grid-area:cross} #panePano{grid-area:pano}
+
+  .info-pane{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:15px;display:flex;flex-direction:column;gap:13px;overflow-y:auto}
+  .info-pane h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-faint);font-family:var(--mono)}
+  .vol-stat{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .stat-card{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:10px}
+  .stat-card .k{font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono)}
+  .stat-card .v{font-size:15px;font-weight:700;font-family:var(--mono);margin-top:3px;color:var(--teal)}
+  .stat-card .v small{font-size:10px;color:var(--ink-dim);font-weight:400}
+
+  #stlStage{position:absolute;inset:0;display:none}
+  #stlStage canvas{display:block}
+  .stl-hud{position:absolute;top:12px;left:12px;z-index:6;font-family:var(--mono);font-size:11px;color:var(--ink-dim);background:rgba(5,8,12,.6);padding:8px 11px;border-radius:7px;border:1px solid var(--line);line-height:1.7;backdrop-filter:blur(4px)}
+  .stl-hud b{color:var(--teal)}
+
+  .step-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:7;background:rgba(167,139,250,.14);border:1px solid var(--violet);color:#ddd6fe;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(4px);display:flex;align-items:center;gap:8px}
+  .step-banner.teal{background:rgba(45,212,191,.13);border-color:var(--teal);color:#bdfff5}
+  .step-banner.blue{background:rgba(96,165,250,.13);border-color:var(--blue);color:#cfe3ff}
+
+  .empty-state{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:32px;z-index:8;background:radial-gradient(ellipse 80% 60% at 50% 28%,#0c141e,#05080c 75%)}
+  .es-inner{width:100%;max-width:660px;display:flex;flex-direction:column;gap:24px}
+  .es-head{display:flex;align-items:center;gap:18px}
+  .es-head .glyph{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;flex:none;background:radial-gradient(circle at 35% 30%,rgba(45,212,191,.22),transparent 72%);border:1px solid var(--line);box-shadow:0 8px 24px rgba(45,212,191,.12)}
+  .es-head .glyph svg{width:32px;height:32px;color:var(--teal);stroke-width:1.4}
+  .es-head h2{font-size:21px;font-weight:700;letter-spacing:.2px}
+  .es-head h2 span{color:var(--teal)}
+  .es-sub{color:var(--ink-dim);font-size:13px;margin-top:5px}
+  .es-cards{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .es-card{display:flex;gap:12px;padding:14px 15px;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:.15s}
+  .es-card:hover{border-color:#33455a;transform:translateY(-1px);box-shadow:var(--shadow)}
+  .es-card .ci{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--panel-2)}
+  .es-card .ci svg{width:18px;height:18px;stroke-width:1.6;fill:none}
+  .es-card .ct{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .es-card .ct b{font-size:13px;font-weight:600;color:var(--ink)}
+  .es-card .ct span{font-size:10.5px;color:var(--ink-faint);line-height:1.5}
+  .es-card.implant .ci{color:var(--violet);background:rgba(167,139,250,.12)}
+  .es-card.ceph .ci{color:var(--blue);background:rgba(96,165,250,.12)}
+  .es-card.mpr .ci{color:var(--teal);background:rgba(45,212,191,.12)}
+  .es-card.stl .ci{color:var(--green);background:rgba(74,222,128,.12)}
+  .es-actions{display:flex;gap:11px}
+  .btn.lg{padding:11px 20px;font-size:13px;border-radius:9px}
+  .es-foot{font-size:10.5px;color:var(--ink-faint);line-height:1.6;text-align:center;border-top:1px solid var(--line);padding-top:15px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .es-foot .sep{width:3px;height:3px;border-radius:50%;background:var(--ink-faint);opacity:.5}
+  kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 7px;color:var(--ink-dim)}
+  .dropping .stage{outline:2px dashed var(--teal);outline-offset:-10px}
+
+  .statusbar{display:flex;align-items:center;gap:16px;padding:7px 16px;background:var(--panel);border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--ink-dim);z-index:20}
+  .statusbar .pill{display:flex;align-items:center;gap:6px}
+  .statusbar .pill .led{width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+  .statusbar .pill.live .led{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .statusbar .sb-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .statusbar .hint{color:var(--ink-faint)}
+  .statusbar .copyright{color:var(--ink-faint);font-size:10.5px;letter-spacing:.2px}
+  .statusbar .copyright b{color:var(--ink-dim);font-weight:600}
+  .statusbar b{color:var(--teal)}
+
+  .loader{position:absolute;inset:0;background:rgba(5,8,12,.86);z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;backdrop-filter:blur(2px)}
+  .loader.on{display:flex}
+  .spinner{width:46px;height:46px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loader .ltxt{font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .loader .bar{width:240px;height:4px;background:var(--line);border-radius:3px;overflow:hidden}
+  .loader .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
+
+  .toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:11px 17px;font-size:12.5px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s;z-index:60;display:flex;align-items:center;gap:9px;max-width:80vw}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .ic{width:7px;height:7px;border-radius:50%;background:var(--teal);flex:none}
+  .toast.warn .ic{background:var(--amber)} .toast.err .ic{background:var(--rose)}
+
+  .disclaimer{font-size:9.5px;color:var(--ink-faint);line-height:1.5;padding:11px 14px;background:rgba(251,113,133,.06)}
+  .disclaimer b{color:var(--rose)}
+  /* ===== 授权门禁 ===== */
+  #licenseGate{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse 80% 60% at 50% 30%,#0c141e,#04070b 80%);display:flex;align-items:center;justify-content:center;font-family:var(--sans)}
+  #licenseGate.unlocked{display:none}
+  .lg-card{width:390px;max-width:90vw;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,.55);text-align:center}
+  .lg-card .mark{width:54px;height:54px;border-radius:15px;margin:0 auto 16px;background:radial-gradient(circle at 30% 30%,#2dd4bf,#0f766e);box-shadow:0 0 0 1px rgba(45,212,191,.3),0 8px 24px rgba(45,212,191,.25)}
+  .lg-card h2{font-size:19px;font-weight:700;margin-bottom:4px}
+  .lg-card h2 span{color:var(--teal)}
+  .lg-card .sub{font-size:12px;color:var(--ink-dim);margin-bottom:22px}
+  .lg-input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:13px 14px;font-family:var(--mono);font-size:17px;text-align:center;letter-spacing:4px}
+  .lg-input::placeholder{letter-spacing:4px;color:var(--ink-faint)}
+  .lg-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+  .lg-btn{width:100%;margin-top:12px;padding:13px;border:none;border-radius:9px;background:linear-gradient(180deg,#16a394,#0f766e);color:#021412;font-weight:700;font-size:14px;cursor:pointer;transition:.13s}
+  .lg-btn:hover{filter:brightness(1.08)}
+  .lg-err{font-size:12px;margin-top:12px;min-height:16px;font-family:var(--mono);color:var(--rose)}
+  .lg-owner{margin-top:16px;background:var(--panel-2);border:1px solid var(--teal);border-radius:11px;padding:15px;text-align:left;display:none}
+  .lg-owner.show{display:block}
+  .lg-owner h3{font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:8px;text-align:center}
+  .lg-code{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--teal);letter-spacing:7px;text-align:center;margin:6px 0}
+  .lg-owner .meta{font-size:10.5px;color:var(--ink-dim);font-family:var(--mono);text-align:center;line-height:1.6}
+  .lg-copy{margin-top:10px;width:100%;padding:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:7px;font-size:12px;cursor:pointer}
+  .lg-copy:hover{border-color:#35506a}
+  .lg-foot{margin-top:18px;font-size:10px;color:var(--ink-faint);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+  .lg-foot b{color:var(--rose)}
+  /* ===== AI 模态框 ===== */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,5,9,.72);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+  .modal-backdrop.show{display:flex}
+  .modal{width:700px;max-width:94vw;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+  .modal-head h2{font-size:15px;font-weight:700}
+  .modal-head h2 span{color:var(--violet);font-size:12px;font-weight:500}
+  .modal-x{background:none;border:none;color:var(--ink-dim);font-size:22px;cursor:pointer;line-height:1}
+  .modal-x:hover{color:var(--ink)}
+  .modal-body{padding:18px 20px}
+  .ai-warn{background:rgba(251,113,133,.1);border:1px solid var(--rose);border-radius:9px;padding:11px 13px;font-size:11.5px;color:#fecdd3;line-height:1.7;margin-bottom:16px}
+  .ai-warn b{color:#fb7185}
+  .ai-field{margin-bottom:11px}
+  .ai-field label{font-size:10.5px;color:var(--ink-faint);font-family:var(--mono);display:block;margin-bottom:4px}
+  .ai-result{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12.5px;line-height:1.75;white-space:pre-wrap;min-height:60px;color:var(--ink)}
+  .ai-result .ai-tag{display:inline-block;background:rgba(167,139,250,.15);border:1px solid var(--violet);color:#ddd6fe;font-size:10px;padding:3px 9px;border-radius:5px;margin-bottom:11px;font-family:var(--mono)}
+  .ipad-menu{display:none}
+  .ipad-tip{display:none}
+
+  @media (pointer:coarse), (max-width:1180px){
+    html,body{height:100dvh}
+    body{overflow:hidden}
+    .ipad-menu{display:inline-flex}
+    .app{height:100dvh}
+    .topbar{flex-wrap:wrap;align-items:flex-start;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px}
+    .topbar .group,.topbar .modetab{width:100%;overflow:auto hidden;-webkit-overflow-scrolling:touch}
+    .topbar .divider,.topbar .spacer{display:none}
+    .btn,.modetab button{min-height:40px}
+    .body{grid-template-columns:1fr;position:relative}
+    .sidebar{position:absolute;top:0;left:0;bottom:0;width:min(380px,84vw);z-index:80;transform:translateX(-104%);transition:transform .22s ease;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+    .app.sidebar-open .sidebar{transform:translateX(0)}
+    .statusbar{padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);flex-wrap:wrap;gap:10px}
+    .statusbar .sb-right{margin-left:0;width:100%;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .statusbar .copyright{width:100%}
+    .ipad-tip{display:block;margin:10px 0 0;width:100%;color:var(--ink-faint);font-size:11px;line-height:1.6}
+    #implantLayout{grid-template-columns:1fr;grid-template-rows:42% 29% 29%;grid-template-areas:"pano" "axial" "cross"}
+    .es-actions{flex-direction:column}
+  }
+
+  @media (pointer:coarse) and (orientation:portrait){
+    #mprGrid{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(180px,1fr))}
+    .info-pane{min-height:220px}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <button class="btn ipad-menu" id="sidebarToggle">菜单</button>
+      <div class="mark"></div>
+      <div><h1>Denta<span>View</span> Pro</h1><div class="tag">CBCT · IMPLANT / ORTHO PLANNING</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <button class="btn primary" id="loadDicom">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z" stroke-width="1.6"/></svg>
+        DICOM 序列</button>
+      <button class="btn" id="loadStl">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" stroke-width="1.6"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5" stroke-width="1.2"/></svg>
+        STL 模型</button>
+    </div>
+    <div class="divider"></div>
+    <div class="modetab" id="modeTab">
+      <button data-mod="mpr" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>影像 MPR</button>
+      <button data-mod="implant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2c2 0 3 2 3 4l-.5 4M12 2c-2 0-3 2-3 4l.5 4M9.5 10h5l-.5 5c-.3 3-.7 7-2 7s-1.7-4-2-7z"/></svg>种植规划</button>
+      <button data-mod="ceph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12a8 8 0 0114-5M20 12a8 8 0 01-14 5"/><circle cx="9" cy="10" r="1.3"/><path d="M12 18v3M8 18v2"/></svg>正畸头影</button>
+      <button data-mod="stl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></svg>三维 STL</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="group">
+      <button class="btn" id="snapBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L17 6h1a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke-width="1.6"/><circle cx="12" cy="13" r="3.2" stroke-width="1.6"/></svg>截图</button>
+      <button class="btn" id="sendCommBtn" disabled style="border-color:#2dd4bf;color:#2dd4bf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12h13M11 6l6 6-6 6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>沟通系统</button>
+      <button class="btn" id="reportBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" stroke-width="1.6"/><path d="M14 3v5h5M9 13h6M9 17h6" stroke-width="1.4"/></svg>报告</button>
+      <button class="btn" id="aiBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3a4 4 0 014 4v1a3 3 0 010 6v1a4 4 0 01-8 0v-1a3 3 0 010-6V7a4 4 0 014-4z" stroke-width="1.5"/><path d="M9 10h.01M15 10h.01" stroke-width="1.6" stroke-linecap="round"/></svg>AI 分析</button>
+    </div>
+    <div class="ipad-tip">iPad 建议横屏使用。单指取点，双指平移；DICOM 改为多选文件导入，不支持文件夹拖入。</div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar" id="sidebar">
+      <!-- measurement tools -->
+      <div class="sec" id="toolsSec">
+        <h2>测量工具</h2>
+        <div class="tool-grid" id="toolGrid">
+          <button class="tool on" data-tool="navigate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v6M12 16v6M2 12h6M16 12h6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.2"/></svg>定位</button>
+          <button class="tool" data-tool="length"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 20L20 4M4 20l3-1M4 20l1-3M20 4l-3 1M20 4l-1 3" stroke-linecap="round"/></svg>线距</button>
+          <button class="tool" data-tool="angle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 19h14M5 19L18 6M5 19a8 8 0 016-8" stroke-linecap="round"/></svg>角度</button>
+          <button class="tool" data-tool="hu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg>灰度</button>
+        </div>
+      </div>
+
+      <!-- arch (implant) -->
+      <div class="sec hidden" id="archSec">
+        <h2>牙弓曲线 <span class="hl" id="archStatus">未定义</span></h2>
+        <div style="font-size:11px;color:var(--ink-dim);line-height:1.6;margin-bottom:9px">在左侧<b style="color:var(--teal)">轴位</b>窗内沿牙槽嵴依次点击 ≥3 点。可拖动控制点微调,右键删点。</div>
+        <div class="group" style="flex-wrap:wrap;gap:6px">
+          <button class="btn sm" id="autoArch">自动弓形</button>
+          <button class="btn sm" id="clearArch">清除</button>
+          <button class="btn sm" id="panoFlipBtn" title="若全景/横断面上下方向不对可手动翻转">⇅ 上下翻转</button>
+        </div>
+        <div class="field"><label>全景层厚 SLAB (mm)</label>
+          <input type="range" id="slabThick" min="1" max="30" value="12"><span style="font-family:var(--mono);font-size:10px;color:var(--ink-dim)" id="slabVal">12 mm</span></div>
+        <div class="field"><label>横断面所在弓位</label>
+          <input type="range" id="archPos" min="0" max="100" value="50"><span style="font-family:var(--mono);font-size:10px;color:var(--ink-dim)" id="archPosVal">—</span></div>
+      </div>
+
+      <!-- implant controls -->
+      <div class="sec hidden" id="implantSec">
+        <h2>种植体 <span class="hl" id="impCount"></span></h2>
+        <div class="row2">
+          <div class="field" style="margin-top:0"><label>直径 Ø mm</label>
+            <select id="impDia"><option>3.3</option><option>3.5</option><option selected>4.0</option><option>4.3</option><option>4.5</option><option>5.0</option><option>6.0</option></select></div>
+          <div class="field" style="margin-top:0"><label>长度 L mm</label>
+            <select id="impLen"><option>6</option><option>8</option><option>8.5</option><option selected>10</option><option>11.5</option><option>13</option><option>16</option></select></div>
+        </div>
+        <button class="btn primary sm" id="placeImp" style="width:100%;justify-content:center;margin-top:9px">在横断面点击放置</button>
+        <div class="field"><label>植入角度 / TILT (°)</label>
+          <input type="range" id="impAngle" min="-45" max="45" value="0"><span style="font-family:var(--mono);font-size:10px;color:var(--ink-dim)" id="impAngleVal">0°</span></div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;line-height:1.5">放置后可拖动体部移动;用<b style="color:var(--rose)">神经</b>工具在横断面标记下牙槽神经管以计算安全距离。</div>
+        <div id="impList"></div>
+      </div>
+
+      <!-- window/level -->
+      <div class="sec" id="wlSec">
+        <h2>窗宽 / 窗位</h2>
+        <div class="preset-row" id="presetRow">
+          <button class="chip" data-ww="2800" data-wl="600">骨</button>
+          <button class="chip" data-ww="400" data-wl="40">软组织</button>
+          <button class="chip" data-ww="1500" data-wl="300">牙体</button>
+          <button class="chip" data-ww="4000" data-wl="700">宽窗</button>
+        </div>
+        <div class="wl-readout"><div><span>WW</span><b id="wwVal">—</b></div><div><span>WL</span><b id="wlVal">—</b></div></div>
+        <div class="slider-row"><label>窗宽 WW<span id="wwTick">—</span></label><input type="range" id="wwSlider" min="1" max="6000" value="2800"></div>
+        <div class="slider-row"><label>窗位 WL<span id="wlTick">—</span></label><input type="range" id="wlSlider" min="-1000" max="3000" value="600"></div>
+      </div>
+
+      <!-- 图像增强 -->
+      <div class="sec" id="adjSec">
+        <h2>图像增强 <span class="hl" id="hdState"></span></h2>
+        <div class="group" style="gap:6px;margin-bottom:4px">
+          <button class="btn primary sm" id="hdBtn" style="flex:1;justify-content:center">⚡ 一键 HD</button>
+          <button class="btn sm" id="adjReset">复位</button>
+        </div>
+        <div class="slider-row"><label>亮度 Brightness<span id="briVal">0</span></label><input type="range" id="briSlider" min="-80" max="80" value="0"></div>
+        <div class="slider-row"><label>对比度 Contrast<span id="conVal">1.00</span></label><input type="range" id="conSlider" min="50" max="250" value="100"></div>
+        <div class="slider-row"><label>清晰度 Sharpness<span id="sharpVal">0</span></label><input type="range" id="sharpSlider" min="0" max="100" value="0"></div>
+      </div>
+
+      <!-- ceph landmarks -->
+      <div class="sec hidden" id="cephSec">
+        <h2>头影标志点 <span class="hl" id="lmkProg">0/0</span></h2>
+        <div class="group" style="gap:6px;margin-bottom:9px">
+          <button class="btn sm" id="cephRebuild">重建侧位片</button>
+          <button class="btn sm" id="cephFlipH">水平翻转</button>
+          <button class="btn sm" id="cephClearLmk">清空点</button>
+        </div>
+        <div class="field" style="margin-top:0"><label>投影方式</label>
+          <select id="cephProj"><option value="mip">MIP 最大密度(类X光)</option><option value="mean">平均密度</option></select></div>
+        <div style="margin:10px 0 6px;font-size:10px;color:var(--ink-faint);font-family:var(--mono)">点击下方标志点后在图上定位 →</div>
+        <div class="lmk-grid" id="lmkGrid"></div>
+      </div>
+      <div class="sec hidden" id="cephResultSec">
+        <h2>头影测量分析</h2>
+        <table class="ceph-tbl"><thead><tr><th>项目</th><th style="text-align:right">测量</th><th style="text-align:right">正常</th><th style="text-align:center">判读</th></tr></thead>
+        <tbody id="cephTbody"><tr><td colspan="4" style="color:var(--ink-faint);text-align:center;padding:10px">完成标志点后自动计算</td></tr></tbody></table>
+      </div>
+
+      <!-- meta -->
+      <div class="sec meta" id="metaSec">
+        <h2>影像信息</h2>
+        <dl id="metaList"><dt>状态</dt><dd id="m-status">未载入</dd></dl>
+      </div>
+
+      <!-- measurement list -->
+      <div class="sec" id="measSec">
+        <h2>测量清单 <span id="mCount" style="color:var(--ink-faint)"></span></h2>
+        <div class="mlist" id="mList"><div class="empty">选择工具后在视图取点</div></div>
+      </div>
+
+      <div class="disclaimer">
+        <b>免责声明</b> · 本工具用于教学/科研/影像浏览参考,<b>非</b>经 NMPA/FDA/CE 认证的医疗器械。种植与头影测量结果不得作为临床诊断或手术依据,必须由执业医师复核。CBCT 灰度非标准化 HU,仅供相对参考。
+      </div>
+    </aside>
+
+    <main class="stage" id="stage">
+      <!-- MPR -->
+      <div class="layout" id="mprGrid">
+        <div class="pane c-axial" data-vp="axial"><canvas></canvas><span class="label">AXIAL 轴位</span><span class="corner"></span><span class="corner bl"></span></div>
+        <div class="pane c-coronal" data-vp="coronal"><canvas></canvas><span class="label">CORONAL 冠状</span><span class="corner"></span><span class="corner bl"></span></div>
+        <div class="pane c-sagittal" data-vp="sagittal"><canvas></canvas><span class="label">SAGITTAL 矢状</span><span class="corner"></span><span class="corner bl"></span></div>
+        <div class="info-pane" id="infoPane">
+          <h3>体数据概览</h3>
+          <div class="vol-stat">
+            <div class="stat-card"><div class="k">Dimensions</div><div class="v" id="vDim">— <small></small></div></div>
+            <div class="stat-card"><div class="k">Voxel</div><div class="v" id="vSpc">— <small>mm</small></div></div>
+            <div class="stat-card"><div class="k">Slices</div><div class="v" id="vSlc">—</div></div>
+            <div class="stat-card"><div class="k">Range</div><div class="v" id="vRange">—</div></div>
+          </div>
+          <h3>快捷键</h3>
+          <div style="font-size:11px;color:var(--ink-dim);line-height:1.9">
+            滚轮 翻层 · 右键拖动 调窗 · 中键拖动 平移<br>Ctrl+滚轮 缩放 · 双击 复位<br>1定位 2线距 3角度 4灰度</div>
+        </div>
+      </div>
+
+      <!-- IMPLANT -->
+      <div class="layout" id="implantLayout">
+        <div class="pane c-pano" id="panePano"><canvas></canvas><span class="label">PANORAMIC 全景重组</span><span class="corner"></span><span class="corner bl"></span></div>
+        <div class="pane c-arch" id="paneArch"><canvas></canvas><span class="label">AXIAL · 弓形</span><span class="corner"></span><span class="corner bl"></span></div>
+        <div class="pane c-cross" id="paneCross"><canvas></canvas><span class="label">CROSS-SECTION 横断面</span><span class="corner"></span><span class="corner bl"></span></div>
+      </div>
+
+      <!-- CEPH -->
+      <div class="layout" id="cephLayout">
+        <div class="pane c-ceph" id="paneCeph"><canvas></canvas><span class="label">LATERAL CEPH 合成侧位片</span><span class="corner"></span><span class="corner bl"></span></div>
+      </div>
+
+      <!-- STL -->
+      <div id="stlStage">
+        <div class="stl-hud" id="stlHud">模型: <b id="stlName">—</b><br>三角面: <b id="stlTris">—</b><br>尺寸: <b id="stlSize">—</b> mm</div>
+      </div>
+
+      <div class="step-banner hidden" id="stepBanner"></div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="es-inner">
+          <div class="es-head">
+            <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3c-2.5 0-4 2-4 5 0 2 .5 3 1 6s1 6 2.5 6S11 16 12 16s2 1 2.5 4S16 20 17 17s1-4 1-6c0-3-1.5-5-4-5-1.2 0-2 .6-3 .6S9.2 3 8 3z" stroke-width="1.3"/></svg></div>
+            <div>
+              <h2>Denta<span>View</span> Pro 工作站</h2>
+              <div class="es-sub">载入 CBCT 影像后开始种植与正畸规划 · 全程本地处理</div>
+            </div>
+          </div>
+
+          <div class="es-cards">
+            <div class="es-card implant"><div class="ci"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M12 2c2 0 3 2 3 4l-.5 4M12 2c-2 0-3 2-3 4l.5 4M9.5 10h5l-.5 5c-.3 3-.7 7-2 7s-1.7-4-2-7z"/></svg></div><div class="ct"><b>种植规划</b><span>牙弓全景重组 · 横断面 · 虚拟种植体 · 神经安全距离</span></div></div>
+            <div class="es-card ceph"><div class="ci"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M4 12a8 8 0 0114-5M20 12a8 8 0 01-14 5"/><circle cx="9" cy="10" r="1.3"/><path d="M12 18v3M8 18v2"/></svg></div><div class="ct"><b>正畸头影</b><span>合成侧位片 · SNA / SNB / ANB / 下颌平面角分析</span></div></div>
+            <div class="es-card mpr"><div class="ci"><svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg></div><div class="ct"><b>影像 MPR</b><span>三平面联动 · 窗宽窗位 · 距离 / 角度 / 灰度测量</span></div></div>
+            <div class="es-card stl"><div class="ci"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></svg></div><div class="ct"><b>三维 STL</b><span>口扫 / 模型浏览 · 表面三维测量</span></div></div>
+          </div>
+
+          <div class="es-actions">
+            <button class="btn primary lg" id="loadDicom2">载入 DICOM 序列</button>
+            <button class="btn lg" id="loadStl2">载入 STL 模型</button>
+          </div>
+
+          <div class="es-foot"><span>iPad 版支持多选文件导入</span><span class="sep"></span><span>不支持整文件夹拖入</span><span class="sep"></span><span>数据不上传</span></div>
+          <div style="text-align:center;font-size:10px;color:var(--ink-faint);opacity:.75;margin-top:-10px">© 2026 Tiejun Qu / DentalSpark · All rights reserved.</div>
+        </div>
+      </div>
+
+      <div class="loader" id="loader"><div class="spinner"></div><div class="ltxt" id="loaderTxt">解析中…</div><div class="bar"><i id="loaderBar"></i></div></div>
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <div class="pill" id="dataPill"><span class="led"></span><span id="dataState">无数据</span></div>
+    <div class="pill"><span style="color:var(--ink-faint)">模块</span> <b id="modState">影像MPR</b></div>
+    <div class="pill"><span style="color:var(--ink-faint)">工具</span> <b id="toolState">定位</b></div>
+    <div class="pill" id="posPill"><span style="color:var(--ink-faint)">坐标</span> <span id="posState">—</span></div>
+    <div class="pill" id="licPill" style="display:none"><span style="color:var(--ink-faint)">授权</span> <b id="licName"></b></div>
+    <div class="sb-right">
+      <span class="hint">数据全程本地处理,不上传</span>
+      <span class="copyright">© 2026 <b>Tiejun Qu / DentalSpark</b> · All rights reserved.</span>
+    </div>
+  </footer>
+</div>
+
+<input type="file" id="dicomInput" multiple class="hidden">
+<input type="file" id="stlInput" multiple accept=".stl,.STL" class="hidden">
+<div class="toast" id="toast"><span class="ic"></span><span id="toastMsg"></span></div>
+
+
+
+<div class="modal-backdrop" id="aiModal">
+  <div class="modal">
+    <div class="modal-head"><h2>AI 辅助分析 <span>· 观察草稿,非诊断</span></h2><button class="modal-x" id="aiClose">×</button></div>
+    <div class="modal-body">
+      <div class="ai-warn"><b>重要提示(务必阅读)</b><br>① 本功能仅生成<b>观察性草稿</b>,<b>不是诊断</b>,不得作为临床诊断或治疗依据,所有内容须由<b>执业医师复核</b>。<br>② 点击分析会把当前图像<b>上传到你配置的 AI 服务</b>(若非本机地址即离开本设备)。患者影像属敏感信息,请确保符合隐私/合规要求后再使用。<br>③ AI 可能产生错误或遗漏(幻觉),切勿据此做医疗决定。</div>
+      <div class="ai-field"><label>接口地址(OpenAI 兼容 /chat/completions)</label><input class="numbox" id="aiUrl" placeholder="https://your-ai-endpoint.example.com/v1/chat/completions"></div>
+      <div class="row2">
+        <div class="ai-field"><label>API Key</label><input class="numbox" id="aiKey" type="password" placeholder="如接口要求可填写"></div>
+        <div class="ai-field"><label>模型(需支持视觉)</label><input class="numbox" id="aiModel" placeholder="qwen2.5vl"></div>
+      </div>
+      <div style="font-size:10px;color:var(--ink-faint);margin:-2px 0 13px;line-height:1.6">iPad 单机版默认不依赖本机代理服务。若需 AI，请填写一个可从 iPad 直接访问的 OpenAI 兼容 HTTPS 接口。配置仅保存在当前浏览器。</div>
+      <div class="group" style="gap:8px">
+        <button class="btn primary sm" id="aiAnalyzePano">分析全景图</button>
+        <button class="btn sm" id="aiAnalyzeStl">分析 STL 视图</button>
+        <button class="btn sm" id="aiUseOllama">使用本机 Ollama</button>
+        <button class="btn sm" id="aiTestConn">测试连接</button>
+        <button class="btn sm" id="aiSaveCfg">保存配置</button>
+      </div>
+      <div class="ai-result" id="aiResult"><span style="color:var(--ink-faint)">配置后点击"分析",结果将显示在此(草稿,须执业医师复核)。</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+'use strict';
+/* ====================== helpers ====================== */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const DPR=window.devicePixelRatio||1;
+const IS_TOUCH_DEVICE=window.matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints||0)>1;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const fmt=(n,d=2)=>Number(n).toFixed(d);
+let toastTimer;
+function toast(msg,type=''){const t=$('#toast');$('#toastMsg').textContent=msg;t.className='toast show'+(type?' '+type:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+function showLoader(on,txt){const l=$('#loader');l.classList.toggle('on',on);if(txt)$('#loaderTxt').textContent=txt;}
+function setProgress(p){$('#loaderBar').style.width=Math.round(p*100)+'%';}
+function banner(txt,cls){const b=$('#stepBanner');if(!txt){b.classList.add('hidden');return;}b.className='step-banner'+(cls?' '+cls:'');b.innerHTML=txt;b.classList.remove('hidden');}
+
+/* ====================== state ====================== */
+const State={
+  mod:'mpr', tool:'navigate',
+  volume:null, cross:{x:0,y:0,z:0}, panoFlip:false,
+  ww:2800, wl:600,
+  adj:{bri:0,con:1,sharp:0,hd:false},
+  measures:[], measureId:1,
+  // implant
+  arch:{ctrl:[],samples:null,stepMM:0.5,slab:12,pos:0.5},
+  implants:[], impId:1, selImp:null, pendingImp:false,
+  nerve:[], // {arch, colMM, zMM}
+  // ceph
+  ceph:{img:null,w:0,h:0,proj:'mip',flipH:false, landmarks:{}, active:null},
+  stl:null,
+};
+const VP={}; // viewport registry
+
+/* ====================== DICOM load ====================== */
+const T={rows:'x00280010',cols:'x00280011',bits:'x00280100',rep:'x00280103',slope:'x00281053',inter:'x00281052',pxsp:'x00280030',thick:'x00180050',ipp:'x00200032',iop:'x00200037',inst:'x00200013',tsuid:'x00020010',pid:'x00100020',pname:'x00100010',modality:'x00080060',sdesc:'x0008103e',study:'x00081030',charset:'x00080005'};
+
+/* ===== DICOM 文本字符集解码(自动识别,优先中文) =====
+   不盲信"特定字符集"标签(部分韩/日产机器标签写错):对同段字节用多种编码各解一遍,
+   按解出的"中文汉字"数量打分取最优。汉字(U+4E00-9FFF)与韩文谚文(U+AC00-D7AF)
+   分属不同 Unicode 区段,可据此区分"韩文标签+中文内容"的情况。 */
+function scoreCJK(s){
+  if(!s)return -1e6;var han=0,hangul=0,kana=0,ascii=0,bad=0;
+  for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
+    if(c===0xFFFD)bad++;
+    else if(c>=0x4E00&&c<=0x9FFF)han++;          // 中日韩统一表意文字(中文)
+    else if(c>=0xAC00&&c<=0xD7AF)hangul++;        // 韩文谚文
+    else if(c>=0x3040&&c<=0x30FF)kana++;          // 日文假名
+    else if(c>=0x20&&c<0x7F)ascii++;              // ASCII 可见
+    else if(c<0x20&&c!==0x0A&&c!==0x0D&&c!==0x09)bad++;
+  }
+  return han*4 + ascii + kana*2 - hangul*0.5 - bad*8; // 中文场景:汉字权重最高,谚文不加分
+}
+function decodeBytes(bytes,scs){
+  scs=(scs||'').toUpperCase();
+  // 明确声明 UTF-8(ISO_IR 192)时直接采用
+  if(scs.indexOf('192')>=0||scs.indexOf('UTF')>=0){try{return new TextDecoder('utf-8',{fatal:false}).decode(bytes);}catch(e){}}
+  var cands=['gb18030','utf-8','big5','euc-kr','shift_jis','iso-8859-1'],best='',bs=-1e9;
+  for(var i=0;i<cands.length;i++){try{var t=new TextDecoder(cands[i],{fatal:false}).decode(bytes);var sc=scoreCJK(t);if(sc>bs){bs=sc;best=t;}}catch(e){}}
+  return best;
+}
+function dtext(ds,tag,scs){
+  try{
+    var el=ds.elements[tag];if(!el||!el.length)return '';
+    var bytes=ds.byteArray.subarray(el.dataOffset,el.dataOffset+el.length);
+    return decodeBytes(bytes,scs).replace(/\u0000+$/,'').replace(/\s+$/,'').trim();
+  }catch(e){try{return (ds.string(tag)||'').trim();}catch(e2){return '';}}
+}
+// DICOM 人名:分组 alphabetic=ideographic=phonetic,优先显示汉字组;^ 分隔 姓^名
+function fmtPersonName(raw){
+  if(!raw)return '';
+  var g=raw.split('=');
+  var pick=(g[1]&&g[1].trim())?g[1]:g[0];
+  return pick.replace(/\^/g,' ').replace(/\s+/g,' ').trim();
+}
+
+async function loadDicomFiles(fileList){
+  let files=[...fileList]; const expanded=[];
+  for(const f of files){
+    if(/\.zip$/i.test(f.name)){
+      try{const zip=await JSZip.loadAsync(f);for(const e of Object.values(zip.files)){if(e.dir)continue;expanded.push({name:e.name,buffer:await e.async('arraybuffer')});}}
+      catch(err){toast('ZIP 解压失败','err');}
+    } else expanded.push({name:f.name,file:f});
+  }
+  if(!expanded.length){toast('未发现可用文件','warn');return;}
+  showLoader(true,'读取 '+expanded.length+' 个文件…');setProgress(0);
+  const slices=[];let bad=0,comp=0;
+  for(let i=0;i<expanded.length;i++){
+    const item=expanded[i];
+    try{
+      const buf=item.buffer||await item.file.arrayBuffer();
+      const arr=new Uint8Array(buf);
+      const ds=dicomParser.parseDicom(arr);
+      const px=ds.elements.x7fe00010; if(!px){bad++;continue;}
+      const ts=ds.string(T.tsuid)||'';
+      if(!/^1\.2\.840\.10008\.1\.2(\.1)?$/.test(ts)){comp++;continue;}
+      const rows=ds.uint16(T.rows),cols=ds.uint16(T.cols); if(!rows||!cols){bad++;continue;}
+      slices.push({ds,px,rows,cols,bits:ds.uint16(T.bits)||16,signed:(ds.uint16(T.rep)||0)===1,
+        slope:parseFloat(ds.floatString(T.slope))||1,inter:parseFloat(ds.floatString(T.inter))||0,
+        ipp:(ds.string(T.ipp)||'').split('\\').map(Number),iop:(ds.string(T.iop)||'').split('\\').map(Number),
+        inst:parseInt(ds.intString(T.inst)||'0',10),psp:(ds.string(T.pxsp)||'1\\1').split('\\').map(Number)});
+    }catch(e){bad++;}
+    if(i%4===0){setProgress(i/expanded.length*0.55);await new Promise(r=>setTimeout(r));}
+  }
+  if(!slices.length){showLoader(false);toast(comp?('压缩 DICOM('+comp+'帧)暂不支持,请先转码为非压缩'):'未解析到有效像素','err');return;}
+  const ref=slices[0];let normal=[0,0,1];
+  if(ref.iop.length===6){const r=ref.iop.slice(0,3),c=ref.iop.slice(3,6);normal=[r[1]*c[2]-r[2]*c[1],r[2]*c[0]-r[0]*c[2],r[0]*c[1]-r[1]*c[0]];}
+  const proj=s=>s.ipp.length===3?(s.ipp[0]*normal[0]+s.ipp[1]*normal[1]+s.ipp[2]*normal[2]):s.inst;
+  slices.sort((a,b)=>(a.ipp.length===3&&b.ipp.length===3)?proj(a)-proj(b):a.inst-b.inst);
+  showLoader(true,'重建三维体数据…');
+  const nx=ref.cols,ny=ref.rows,nz=slices.length;
+  const sx=ref.psp[1]||ref.psp[0]||1,sy=ref.psp[0]||1;
+  let sz=parseFloat(ref.ds.floatString(T.thick))||0;
+  if(nz>1&&slices[0].ipp.length===3&&slices[1].ipp.length===3)sz=Math.abs(proj(slices[1])-proj(slices[0]))||sz;
+  if(!sz)sz=1;
+  let vol;try{vol=new Int16Array(nx*ny*nz);}catch(e){showLoader(false);toast('体数据过大,内存不足','err');return;}
+  let vmin=32767,vmax=-32768;
+  for(let z=0;z<nz;z++){
+    const s=slices[z],sp=readPixels(s),base=z*nx*ny;
+    for(let p=0;p<nx*ny;p++){let v=sp[p]*s.slope+s.inter;v=v<-32768?-32768:v>32767?32767:v|0;vol[base+p]=v;if(v<vmin)vmin=v;if(v>vmax)vmax=v;}
+    if(z%6===0){setProgress(0.55+z/nz*0.45);await new Promise(r=>setTimeout(r));}
+  }
+  const scs=ref.ds.string(T.charset)||'';
+  State.volume={data:vol,nx,ny,nz,sx,sy,sz,vmin,vmax,meta:{
+    pid:dtext(ref.ds,T.pid,scs)||'—',pname:fmtPersonName(dtext(ref.ds,T.pname,scs))||'匿名',
+    modality:dtext(ref.ds,T.modality,scs)||'—',sdesc:dtext(ref.ds,T.sdesc,scs)||dtext(ref.ds,T.study,scs)||'—'}};
+  State.cross={x:nx>>1,y:ny>>1,z:nz>>1};
+  // reset planning
+  State.arch={ctrl:[],samples:null,stepMM:0.5,slab:12,pos:0.5};
+  State.implants=[];State.nerve=[];State.measures=[];State.ceph.img=null;State.ceph.landmarks={};
+  // 全景垂直方向:DICOM 患者坐标 +z 为头侧;法向 z>0 表示体素 z 越大越靠头侧,
+  // 此时需把全景上下翻转使头侧在上(否则顶部会是足侧 → 看起来上下颠倒)
+  State.panoFlip = normal[2] > 0;
+  autoWindow(vmin,vmax);
+  showLoader(false);
+  onVolumeReady();
+  toast('体数据重建完成 '+nx+'×'+ny+'×'+nz+(bad+comp?` (跳过${bad+comp}帧)`:''));
+}
+function readPixels(s){
+  const{px,rows,cols,bits,signed,ds}=s,n=rows*cols,buf=ds.byteArray.buffer,off=px.dataOffset;
+  if(bits<=8)return new Uint8Array(buf,off,n);
+  if(off%2===0)return signed?new Int16Array(buf,off,n):new Uint16Array(buf,off,n);
+  const tmp=new ArrayBuffer(n*2);new Uint8Array(tmp).set(new Uint8Array(buf,off,n*2));
+  return signed?new Int16Array(tmp):new Uint16Array(tmp);
+}
+function autoWindow(vmin,vmax){const ww=Math.max(1,Math.round(vmax-vmin)),wl=Math.round((vmax+vmin)/2);
+  $('#wwSlider').max=Math.max(6000,ww);$('#wlSlider').min=Math.min(-1000,vmin);$('#wlSlider').max=Math.max(3000,vmax);
+  setWindow(ww,wl);}
+
+/* ====================== trilinear sampler ====================== */
+function triSample(x,y,z){
+  const v=State.volume,nx=v.nx,ny=v.ny,nz=v.nz,D=v.data;
+  if(x<0)x=0;if(y<0)y=0;if(z<0)z=0;if(x>nx-1)x=nx-1;if(y>ny-1)y=ny-1;if(z>nz-1)z=nz-1;
+  const x0=x|0,y0=y|0,z0=z|0,x1=x0<nx-1?x0+1:x0,y1=y0<ny-1?y0+1:y0,z1=z0<nz-1?z0+1:z0;
+  const xd=x-x0,yd=y-y0,zd=z-z0,A=nx*ny;
+  const c=(X,Y,Z)=>D[Z*A+Y*nx+X];
+  const c00=c(x0,y0,z0)*(1-xd)+c(x1,y0,z0)*xd,c10=c(x0,y1,z0)*(1-xd)+c(x1,y1,z0)*xd;
+  const c01=c(x0,y0,z1)*(1-xd)+c(x1,y0,z1)*xd,c11=c(x0,y1,z1)*(1-xd)+c(x1,y1,z1)*xd;
+  return (c00*(1-yd)+c10*yd)*(1-zd)+(c01*(1-yd)+c11*yd)*zd;
+}
+
+/* ====================== generic Viewport ====================== */
+/* opts: id, paneSel, build()->{buf,w,h,mmx,mmy}, getSig(), overlay(ctx,vp), onClick(img,e,vp),
+   onScroll(dir,vp), allowWL, allowMeasure */
+function makeViewport(opts){
+  const pane=$(opts.paneSel);
+  const canvas=pane.querySelector('canvas'),ctx=canvas.getContext('2d');
+  const corner=pane.querySelector('.corner:not(.bl)'),cornerBL=pane.querySelector('.corner.bl');
+  const vp={id:opts.id,pane,canvas,ctx,corner,cornerBL,opts,zoom:1,panX:0,panY:0,_sig:null,_buf:null,imgW:0,imgH:0,mmx:1,mmy:1,_draw:null};
+  function rebuild(){const r=opts.build();if(!r){vp._buf=null;return;}vp._buf=r.buf;vp.imgW=r.w;vp.imgH=r.h;vp.mmx=r.mmx;vp.mmy=r.mmy;}
+  vp.render=function(){
+    const v=State.volume;
+    const cw=canvas.width=canvas.clientWidth*DPR,ch=canvas.height=canvas.clientHeight*DPR;
+    ctx.clearRect(0,0,cw,ch);
+    if(!v||!opts.ready||!opts.ready()){return;}
+    const sig=opts.getSig?opts.getSig():'';
+    if(sig!==vp._sig){vp._sig=sig;rebuild();}
+    if(!vp._buf)return;
+    ctx.imageSmoothingEnabled=true;
+    const pw=vp.imgW*vp.mmx,ph=vp.imgH*vp.mmy;
+    const fit=Math.min(cw/pw,ch/ph)*vp.zoom;
+    const dw=pw*fit,dh=ph*fit,dx=(cw-dw)/2+vp.panX,dy=(ch-dh)/2+vp.panY;
+    vp._draw={dx,dy,dw,dh,fit};
+    ctx.drawImage(vp._buf,0,0,vp.imgW,vp.imgH,dx,dy,dw,dh);
+    drawScaleBar(vp,fit,dx,dy,dw,dh);
+    if(opts.overlay)opts.overlay(ctx,vp);
+    if(opts.allowMeasure!==false)drawMeasuresOn(vp);
+    if(corner)corner.textContent=opts.cornerText?opts.cornerText():'';
+    if(cornerBL)cornerBL.textContent='Zoom '+fmt(vp.zoom,1)+'×';
+  };
+  vp.screenToImg=(cx,cy)=>{const r=canvas.getBoundingClientRect();const px=(cx-r.left)*DPR,py=(cy-r.top)*DPR,d=vp._draw;if(!d)return null;return{u:(px-d.dx)/d.dw*vp.imgW,v:(py-d.dy)/d.dh*vp.imgH};};
+  vp.imgToScreen=(u,vv)=>{const d=vp._draw;return{x:d.dx+u/vp.imgW*d.dw,y:d.dy+vv/vp.imgH*d.dh};};
+  vp.markDirty=()=>{vp._sig=null;};
+  bindViewport(vp);
+  VP[opts.id]=vp;
+  return vp;
+}
+function grayBuffer(w,h,sampleRaw){
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const c=cv.getContext('2d'),img=c.createImageData(w,h),d=img.data;
+  const lo=State.wl-State.ww/2,sc=255/State.ww;
+  const A=State.adj,hasAdj=(A.bri||A.con!==1),hasSharp=A.sharp>0;
+  if(!hasAdj&&!hasSharp){ // 快速路径
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let g=(sampleRaw(x,y)-lo)*sc;g=g<0?0:g>255?255:g;const j=(y*w+x)*4;d[j]=d[j+1]=d[j+2]=g;d[j+3]=255;}
+    c.putImageData(img,0,0);return cv;
+  }
+  const lum=new Float32Array(w*h);let p=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++,p++){let g=(sampleRaw(x,y)-lo)*sc;lum[p]=g<0?0:g>255?255:g;}
+  if(hasAdj){const con=A.con,bri=A.bri;for(let i=0;i<lum.length;i++){let g=(lum[i]-128)*con+128+bri;lum[i]=g<0?0:g>255?255:g;}}
+  let out=lum;
+  if(hasSharp)out=unsharpMask(lum,w,h,A.sharp);
+  for(let i=0,j=0;i<out.length;i++,j+=4){const g=out[i];d[j]=d[j+1]=d[j+2]=g;d[j+3]=255;}
+  c.putImageData(img,0,0);return cv;
+}
+// 非锐化掩模(USM):src + amount*(src - 模糊)
+function unsharpMask(src,w,h,amount){
+  const tmp=new Float32Array(w*h),blur=new Float32Array(w*h);
+  for(let y=0;y<h;y++){const r=y*w;for(let x=0;x<w;x++){tmp[r+x]=(src[r+x]+src[r+(x>0?x-1:0)]+src[r+(x<w-1?x+1:w-1)])/3;}}
+  for(let y=0;y<h;y++){const r=y*w,ru=(y>0?y-1:0)*w,rd=(y<h-1?y+1:h-1)*w;for(let x=0;x<w;x++){blur[r+x]=(tmp[r+x]+tmp[ru+x]+tmp[rd+x])/3;}}
+  const k=amount*2.2,out=new Float32Array(w*h);
+  for(let i=0;i<src.length;i++){let g=src[i]+k*(src[i]-blur[i]);out[i]=g<0?0:g>255?255:g;}
+  return out;
+}
+function drawScaleBar(vp,fit,dx,dy,dw,dh){
+  const ctx=vp.ctx,len=10*fit*(vp.mmx?1:1); // 10mm = 10 * (px per mm). px per mm = fit (buffer is in mm-space already via mmx)
+  const pxPerMM=fit; const bar=10*pxPerMM;
+  if(bar<8||bar>dw*0.7)return;
+  ctx.save();ctx.strokeStyle='rgba(230,237,243,.7)';ctx.fillStyle='rgba(230,237,243,.85)';ctx.lineWidth=1.4*DPR;ctx.font=(10*DPR)+'px monospace';
+  const bx=dx+12*DPR,by=dy+dh-14*DPR;
+  ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+bar,by);ctx.moveTo(bx,by-4*DPR);ctx.lineTo(bx,by+4*DPR);ctx.moveTo(bx+bar,by-4*DPR);ctx.lineTo(bx+bar,by+4*DPR);ctx.stroke();
+  ctx.fillText('10 mm',bx,by-6*DPR);ctx.restore();
+}
+
+/* measurement (generic, surface+sig scoped) */
+let activeDraft=null;
+function surfaceKey(vp){return vp.id;}
+function curSig(vp){return vp.opts.getSig?vp.opts.getSig():'';}
+function drawMeasuresOn(vp){
+  const key=surfaceKey(vp),sig=curSig(vp);
+  for(const m of State.measures){if(m.surface!==key||m.sig!==sig)continue;drawMeasure(vp,m);}
+  if(activeDraft&&activeDraft.surface===key&&activeDraft.sig===sig)drawMeasure(vp,activeDraft);
+}
+function drawMeasure(vp,m){
+  const ctx=vp.ctx,pts=m.pts.map(p=>vp.imgToScreen(p.u,p.v));
+  ctx.save();ctx.strokeStyle=m.color;ctx.fillStyle=m.color;ctx.lineWidth=1.6*DPR;ctx.font=(11*DPR)+'px monospace';
+  const handle=p=>{ctx.beginPath();ctx.arc(p.x,p.y,3*DPR,0,7);ctx.fill();};
+  if(m.type==='length'){if(pts.length>=2){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.stroke();}pts.forEach(handle);if(pts.length>=2&&m.value!=null){const mid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};label(ctx,fmt(m.value,2)+' mm',mid.x+6*DPR,mid.y-6*DPR,m.color);}}
+  else if(m.type==='angle'){if(pts.length>=2){ctx.beginPath();ctx.moveTo(pts[1].x,pts[1].y);ctx.lineTo(pts[0].x,pts[0].y);ctx.stroke();}if(pts.length>=3){ctx.beginPath();ctx.moveTo(pts[1].x,pts[1].y);ctx.lineTo(pts[2].x,pts[2].y);ctx.stroke();}pts.forEach(handle);if(pts.length>=3&&m.value!=null)label(ctx,fmt(m.value,1)+'°',pts[1].x+8*DPR,pts[1].y-4*DPR,m.color);}
+  else if(m.type==='hu'){handle(pts[0]);ctx.beginPath();ctx.arc(pts[0].x,pts[0].y,6*DPR,0,7);ctx.stroke();if(m.value!=null)label(ctx,m.value+'',pts[0].x+9*DPR,pts[0].y-4*DPR,m.color);}
+  ctx.restore();
+}
+function label(ctx,txt,x,y,color){ctx.save();const w=ctx.measureText(txt).width;ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(x-2*DPR,y-11*DPR,w+5*DPR,14*DPR);ctx.fillStyle=color;ctx.fillText(txt,x,y);ctx.restore();}
+function handleMeasureClick(vp,img,e){
+  if(img.u<0||img.u>=vp.imgW||img.v<0||img.v>=vp.imgH)return;
+  const t=State.tool,key=surfaceKey(vp),sig=curSig(vp);
+  const colors={length:'#fbbf24',angle:'#60a5fa',hu:'#4ade80'};
+  if(t==='hu'){const val=Math.round(sampleAt(vp,img.u,img.v));addMeasure({surface:key,sig,type:'hu',color:colors.hu,pts:[{u:img.u,v:img.v}],value:val,vpLabel:vp.opts.shortName});return;}
+  if(!activeDraft||activeDraft.surface!==key||activeDraft.sig!==sig||activeDraft.type!==t)activeDraft={surface:key,sig,type:t,color:colors[t],pts:[],value:null,vpLabel:vp.opts.shortName};
+  activeDraft.pts.push({u:img.u,v:img.v});
+  computeMeasure(vp,activeDraft);
+  if(activeDraft.pts.length>=(t==='angle'?3:2)){addMeasure(activeDraft);activeDraft=null;}
+  renderActive();
+}
+function computeMeasure(vp,m){const P=m.pts;
+  if(m.type==='length'&&P.length>=2){const dx=(P[1].u-P[0].u)*vp.mmx,dy=(P[1].v-P[0].v)*vp.mmy;m.value=Math.hypot(dx,dy);}
+  else if(m.type==='angle'&&P.length>=3){const a={x:(P[0].u-P[1].u)*vp.mmx,y:(P[0].v-P[1].v)*vp.mmy},b={x:(P[2].u-P[1].u)*vp.mmx,y:(P[2].v-P[1].v)*vp.mmy};let cs=(a.x*b.x+a.y*b.y)/(Math.hypot(a.x,a.y)*Math.hypot(b.x,b.y));m.value=Math.acos(clamp(cs,-1,1))*180/Math.PI;}}
+function sampleAt(vp,u,vv){return vp.opts.sampleRaw?vp.opts.sampleRaw(u|0,vv|0):0;}
+function addMeasure(m){m.id=State.measureId++;const nm=m.vpLabel||'';m.label=({length:'线距',angle:'角度',hu:'灰度'}[m.type])+' @'+nm;State.measures.push(m);renderMeasureList();renderActive();}
+
+function renderMeasureList(){
+  const wrap=$('#mList'),all=[...State.measures,...(State.stlMeasures||[])];
+  $('#mCount').textContent=all.length?'('+all.length+')':'';
+  if(!all.length){wrap.innerHTML='<div class="empty">选择工具后在视图取点</div>';return;}
+  wrap.innerHTML='';
+  for(const m of all){const row=document.createElement('div');row.className='mrow';
+    const v=m.type==='length'?fmt(m.value,2)+' mm':m.type==='angle'?fmt(m.value,1)+'°':m.type==='hu'?m.value+'':fmt(m.value,2)+' mm';
+    row.innerHTML=`<span class="dot" style="background:${m.color}"></span><span class="lbl">${m.label}</span><span class="val">${v}</span><button class="del">×</button>`;
+    row.querySelector('.del').onclick=()=>{if(m.stl)State.stlMeasures=State.stlMeasures.filter(x=>x!==m);else State.measures=State.measures.filter(x=>x!==m);renderMeasureList();renderActive();};
+    wrap.appendChild(row);}
+}
+function renderActive(){const vp=activeVP();if(vp&&vp.render)vp.render();else renderModule();}
+
+function touchPoint(t){
+  return {x:t.clientX,y:t.clientY};
+}
+
+function touchCenter(touches){
+  if(!touches.length)return {x:0,y:0};
+  if(touches.length===1)return touchPoint(touches[0]);
+  return {
+    x:(touches[0].clientX+touches[1].clientX)/2,
+    y:(touches[0].clientY+touches[1].clientY)/2
+  };
+}
+
+function touchDistance(touches){
+  if(touches.length<2)return 0;
+  const dx=touches[0].clientX-touches[1].clientX;
+  const dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
+}
+
+/* viewport interaction */
+function bindViewport(vp){
+  const pane=vp.pane,canvas=vp.canvas;let drag=null,last=null,wlS=null,touchStartDist=0,startZoom=1;
+  pane.addEventListener('mouseenter',()=>setActivePane(vp));
+  pane.addEventListener('wheel',e=>{
+    if(!State.volume)return;
+    if(e.ctrlKey||e.metaKey){e.preventDefault();vp.zoom=clamp(vp.zoom*(e.deltaY>0?0.9:1.1),0.3,8);vp.render();return;}
+    if(vp.opts.onScroll){e.preventDefault();vp.opts.onScroll(e.deltaY>0?1:-1,vp);}
+  },{passive:false});
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('mousedown',e=>{
+    if(!State.volume)return;setActivePane(vp);
+    if(e.button===2&&vp.opts.allowWL!==false){drag='wl';wlS={x:e.clientX,y:e.clientY,ww:State.ww,wl:State.wl};return;}
+    if(e.button===1){drag='pan';last={x:e.clientX,y:e.clientY};e.preventDefault();return;}
+    if(e.button===0){
+      const img=vp.screenToImg(e.clientX,e.clientY);if(!img)return;
+      if(vp.opts.onClick&&vp.opts.onClick(img,e,vp)){drag='custom';return;}
+      if(State.tool==='navigate'&&vp.opts.onNavigate){vp.opts.onNavigate(img,vp);drag='nav';}
+      else if(['length','angle','hu'].includes(State.tool)&&vp.opts.allowMeasure!==false)handleMeasureClick(vp,img,e);
+    }
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    if(drag==='wl'){const dx=e.clientX-wlS.x,dy=e.clientY-wlS.y;setWindow(Math.max(1,Math.round(wlS.ww+dx*4)),Math.round(wlS.wl-dy*4));markAllDirty();renderModule();}
+    else if(drag==='pan'){vp.panX+=(e.clientX-last.x)*DPR;vp.panY+=(e.clientY-last.y)*DPR;last={x:e.clientX,y:e.clientY};vp.render();}
+    else if(drag==='nav'&&vp.opts.onNavigate){const img=vp.screenToImg(e.clientX,e.clientY);if(img)vp.opts.onNavigate(img,vp);}
+    else if(drag==='custom'&&vp.opts.onDrag){const img=vp.screenToImg(e.clientX,e.clientY);if(img)vp.opts.onDrag(img,vp);}
+  });
+  window.addEventListener('mouseup',()=>{if(drag==='custom'&&vp.opts.onDragEnd)vp.opts.onDragEnd();drag=null;});
+  canvas.addEventListener('touchstart',e=>{
+    if(!State.volume||!e.touches.length)return;
+    setActivePane(vp);
+    if(e.touches.length>=2){
+      drag='gesture';
+      last=touchCenter(e.touches);
+      touchStartDist=touchDistance(e.touches);
+      startZoom=vp.zoom;
+      e.preventDefault();
+      return;
+    }
+    const p=touchPoint(e.touches[0]);
+    const img=vp.screenToImg(p.x,p.y);if(!img)return;
+    if(vp.opts.onClick&&vp.opts.onClick(img,e,vp)){drag='custom';e.preventDefault();return;}
+    if(State.tool==='navigate'&&vp.opts.onNavigate){vp.opts.onNavigate(img,vp);drag='nav';e.preventDefault();return;}
+    if(['length','angle','hu'].includes(State.tool)&&vp.opts.allowMeasure!==false){handleMeasureClick(vp,img,e);drag='tap';e.preventDefault();}
+  },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    if(!drag||!e.touches.length)return;
+    if(drag==='gesture'&&e.touches.length>=2){
+      const center=touchCenter(e.touches);
+      const dist=touchDistance(e.touches);
+      vp.panX+=(center.x-last.x)*DPR;
+      vp.panY+=(center.y-last.y)*DPR;
+      if(touchStartDist>0)vp.zoom=clamp(startZoom*(dist/touchStartDist),0.3,8);
+      last=center;
+      vp.render();
+      e.preventDefault();
+      return;
+    }
+    const p=touchPoint(e.touches[0]);
+    if(drag==='nav'&&vp.opts.onNavigate){
+      const img=vp.screenToImg(p.x,p.y);if(img)vp.opts.onNavigate(img,vp);
+      e.preventDefault();
+    }else if(drag==='custom'&&vp.opts.onDrag){
+      const img=vp.screenToImg(p.x,p.y);if(img)vp.opts.onDrag(img,vp);
+      e.preventDefault();
+    }
+  },{passive:false});
+  canvas.addEventListener('touchend',()=>{
+    if(drag==='custom'&&vp.opts.onDragEnd)vp.opts.onDragEnd();
+    drag=null;
+  });
+  canvas.addEventListener('mousemove',e=>{
+    if(!State.volume||!vp._draw)return;const img=vp.screenToImg(e.clientX,e.clientY);
+    if(img&&img.u>=0&&img.u<vp.imgW&&img.v>=0&&img.v<vp.imgH){
+      const val=vp.opts.sampleRaw?Math.round(vp.opts.sampleRaw(img.u|0,img.v|0)):'';
+      $('#posState').textContent=vp.opts.shortName+' ('+(img.u|0)+','+(img.v|0)+') '+val;}
+  });
+  pane.addEventListener('dblclick',()=>{vp.zoom=1;vp.panX=0;vp.panY=0;vp.render();});
+}
+function setActivePane(vp){$$('.pane').forEach(p=>p.classList.remove('active'));vp.pane.classList.add('active');State._active=vp.id;}
+function activeVP(){return VP[State._active]||null;}
+function markAllDirty(){Object.values(VP).forEach(v=>v.markDirty());}
+
+/* ====================== MPR viewports ====================== */
+function buildMprSampler(plane){
+  const v=State.volume,c=State.cross;
+  const fz=z=>State.panoFlip?(v.nz-1-z):z; // 显示行→体素z(头脚方向修正)
+  if(plane==='axial')return{w:v.nx,h:v.ny,mmx:v.sx,mmy:v.sy,raw:(x,y)=>v.data[c.z*v.nx*v.ny+y*v.nx+x]};
+  if(plane==='coronal')return{w:v.nx,h:v.nz,mmx:v.sx,mmy:v.sz,raw:(x,z)=>v.data[fz(z)*v.nx*v.ny+c.y*v.nx+x]};
+  return{w:v.ny,h:v.nz,mmx:v.sy,mmy:v.sz,raw:(y,z)=>v.data[fz(z)*v.nx*v.ny+y*v.nx+c.x]};
+}
+function makeMpr(plane,sel,shortName){
+  let S=null;
+  const ensure=()=>{S=buildMprSampler(plane);};
+  return makeViewport({id:plane,paneSel:sel,shortName,ready:()=>!!State.volume,allowWL:true,
+    getSig:()=>{const c=State.cross;ensure();return plane+'|'+(plane==='axial'?c.z:plane==='coronal'?c.y:c.x)+'|'+State.ww+'|'+State.wl+'|'+State.panoFlip;},
+    build:()=>{ensure();return{buf:grayBuffer(S.w,S.h,S.raw),w:S.w,h:S.h,mmx:S.mmx,mmy:S.mmy};},
+    sampleRaw:(u,vv)=>{ensure();return S.raw(clamp(u,0,S.w-1),clamp(vv,0,S.h-1));},
+    cornerText:()=>{const c=State.cross,v=State.volume;const idx=plane==='axial'?c.z:plane==='coronal'?c.y:c.x;const mx=plane==='axial'?v.nz:plane==='coronal'?v.ny:v.nx;return 'Sl '+(idx+1)+'/'+mx;},
+    onScroll:(dir)=>{const v=State.volume,c=State.cross;if(plane==='axial')c.z=clamp(c.z+dir,0,v.nz-1);if(plane==='coronal')c.y=clamp(c.y+dir,0,v.ny-1);if(plane==='sagittal')c.x=clamp(c.x+dir,0,v.nx-1);renderMpr();updatePos();},
+    onNavigate:(img)=>{const c=State.cross,v=State.volume,u=clamp(img.u|0,0,VP[plane].imgW-1),w=clamp(img.v|0,0,VP[plane].imgH-1);const zc=State.panoFlip?(v.nz-1-w):w;if(plane==='axial'){c.x=u;c.y=w;}else if(plane==='coronal'){c.x=u;c.z=zc;}else{c.y=u;c.z=zc;}renderMpr();updatePos();},
+    overlay:(ctx,vp)=>{drawCrosshair(ctx,vp,plane);}
+  });
+}
+function drawCrosshair(ctx,vp,plane){
+  const c=State.cross,v=State.volume;let cu,cv;
+  const fz=z=>State.panoFlip?(v.nz-1-z):z;
+  if(plane==='axial'){cu=c.x;cv=c.y;}else if(plane==='coronal'){cu=c.x;cv=fz(c.z);}else{cu=c.y;cv=fz(c.z);}
+  const d=vp._draw,s=vp.imgToScreen(cu+0.5,cv+0.5);
+  ctx.save();ctx.strokeStyle='rgba(45,212,191,.35)';ctx.lineWidth=1*DPR;
+  ctx.beginPath();ctx.moveTo(s.x,d.dy);ctx.lineTo(s.x,d.dy+d.dh);ctx.moveTo(d.dx,s.y);ctx.lineTo(d.dx+d.dw,s.y);ctx.stroke();
+  ctx.fillStyle='rgba(45,212,191,.9)';ctx.fillRect(s.x-1,s.y-1,2*DPR,2*DPR);ctx.restore();
+}
+function renderMpr(){['axial','coronal','sagittal'].forEach(p=>VP[p]&&VP[p].render());}
+
+/* ====================== ARCH / PANORAMIC / CROSS-SECTION ====================== */
+function buildArch(){
+  const v=State.volume,C=State.arch.ctrl;
+  if(C.length<2){State.arch.samples=null;$('#archStatus').textContent='未定义';return;}
+  // dense Catmull-Rom
+  const dense=[];
+  for(let i=0;i<C.length-1;i++){
+    const p0=C[i-1]||C[i],p1=C[i],p2=C[i+1],p3=C[i+2]||C[i+1];
+    for(let s=0;s<24;s++){const t=s/24,t2=t*t,t3=t2*t;
+      dense.push({x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+                  y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)});}
+  }
+  dense.push(C[C.length-1]);
+  // resample by arc length (mm)
+  const sx=v.sx,sy=v.sy,step=State.arch.stepMM;
+  const out=[];out.push({x:dense[0].x,y:dense[0].y});
+  let distAccum=0; // distance traveled since last emitted sample
+  for(let i=1;i<dense.length;i++){
+    const ax=dense[i-1].x,ay=dense[i-1].y,bx=dense[i].x,by=dense[i].y;
+    const L=Math.hypot((bx-ax)*sx,(by-ay)*sy);if(L<1e-9)continue;
+    let pos=0;
+    while(distAccum+(L-pos)>=step){
+      const advance=step-distAccum;pos+=advance;const f=pos/L;
+      out.push({x:ax+(bx-ax)*f,y:ay+(by-ay)*f});distAccum=0;
+    }
+    distAccum+=(L-pos);
+  }
+  // compute tangent/normal (voxel-space normal representing 1mm step)
+  for(let i=0;i<out.length;i++){
+    const a=out[Math.max(0,i-1)],b=out[Math.min(out.length-1,i+1)];
+    let tx=(b.x-a.x)*sx,ty=(b.y-a.y)*sy;const L=Math.hypot(tx,ty)||1;tx/=L;ty/=L;
+    const nmx=-ty,nmy=tx; // normal in mm
+    out[i].nx=nmx/sx;out[i].ny=nmy/sy; // voxel offset per 1mm along normal
+  }
+  State.arch.samples=out;
+  $('#archStatus').textContent=out.length+' 点 · '+fmt((out.length-1)*step,0)+'mm';
+  $('#archPosVal').textContent='第 '+(Math.round(State.arch.pos*(out.length-1))+1)+'/'+out.length+' 断面';
+}
+function autoArch(){
+  const v=State.volume;
+  // parabola spanning width, opening posteriorly; placed in axial center band
+  const cx=v.nx/2, cy=v.ny*0.42, halfW=v.nx*0.36, depth=v.ny*0.30;
+  const pts=[];for(let i=0;i<=6;i++){const t=(i/6)*2-1;pts.push({x:cx+t*halfW,y:cy+depth*(t*t)});}
+  State.arch.ctrl=pts;buildArch();renderImplant();toast('已生成示例弓形,可拖动控制点调整');
+}
+function archPointAt(pos){const S=State.arch.samples;if(!S)return null;const i=clamp(Math.round(pos*(S.length-1)),0,S.length-1);return{i,p:S[i]};}
+
+/* arch axial viewport */
+function makeArchVP(){
+  return makeViewport({id:'arch',paneSel:'#paneArch',shortName:'弓位',allowWL:true,allowMeasure:false,
+    ready:()=>!!State.volume,
+    getSig:()=>'arch|'+State.cross.z+'|'+State.ww+'|'+State.wl,
+    build:()=>{const v=State.volume,c=State.cross;return{buf:grayBuffer(v.nx,v.ny,(x,y)=>v.data[c.z*v.nx*v.ny+y*v.nx+x]),w:v.nx,h:v.ny,mmx:v.sx,mmy:v.sy};},
+    sampleRaw:(x,y)=>{const v=State.volume,c=State.cross;return v.data[c.z*v.nx*v.ny+clamp(y,0,v.ny-1)*v.nx+clamp(x,0,v.nx-1)];},
+    cornerText:()=>'Z '+(State.cross.z+1)+'/'+State.volume.nz,
+    onScroll:(dir)=>{const v=State.volume;State.cross.z=clamp(State.cross.z+dir,0,v.nz-1);renderImplant();},
+    onClick:(img,e,vp)=>{
+      // edit arch points
+      if(e.button!==0)return false;
+      const C=State.arch.ctrl;
+      // hit existing point?
+      let hit=-1;for(let i=0;i<C.length;i++){if(Math.hypot(C[i].x-img.u,C[i].y-img.v)*State.volume.sx<2.5){hit=i;break;}}
+      if(e.shiftKey&&hit>=0){C.splice(hit,1);buildArch();renderImplant();return false;}
+      if(hit>=0){vp._dragPt=hit;return true;}
+      C.push({x:img.u,y:img.v});buildArch();renderImplant();return false;
+    },
+    onDrag:(img,vp)=>{if(vp._dragPt!=null){State.arch.ctrl[vp._dragPt]={x:img.u,y:img.v};buildArch();renderImplant();}},
+    onDragEnd:()=>{VP.arch._dragPt=null;},
+    overlay:(ctx,vp)=>{drawArchOverlay(ctx,vp);}
+  });
+}
+function drawArchOverlay(ctx,vp){
+  const S=State.arch.samples,C=State.arch.ctrl;
+  ctx.save();
+  if(S){ctx.strokeStyle='rgba(45,212,191,.85)';ctx.lineWidth=1.6*DPR;ctx.beginPath();
+    S.forEach((p,i)=>{const s=vp.imgToScreen(p.x,p.y);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});ctx.stroke();
+    // current cross-section position
+    const ap=archPointAt(State.arch.pos);if(ap){const s=vp.imgToScreen(ap.p.x,ap.p.y);
+      ctx.fillStyle='#a78bfa';ctx.beginPath();ctx.arc(s.x,s.y,5*DPR,0,7);ctx.fill();
+      // normal direction tick
+      const n=ap.p;const s2=vp.imgToScreen(n.x+n.nx*12,n.y+n.ny*12),s3=vp.imgToScreen(n.x-n.nx*12,n.y-n.ny*12);
+      ctx.strokeStyle='rgba(167,139,250,.8)';ctx.lineWidth=1.4*DPR;ctx.beginPath();ctx.moveTo(s2.x,s2.y);ctx.lineTo(s3.x,s3.y);ctx.stroke();}
+  }
+  ctx.fillStyle='#2dd4bf';C.forEach(p=>{const s=vp.imgToScreen(p.x,p.y);ctx.beginPath();ctx.arc(s.x,s.y,3.5*DPR,0,7);ctx.fill();});
+  ctx.restore();
+}
+
+/* panoramic viewport */
+function sampleCrossRaw(arch_i,colMM,zRow){ // for measure on cross
+  const S=State.arch.samples;if(!S)return State.volume.vmin;const p=S[clamp(arch_i,0,S.length-1)];
+  return triSample(p.x+p.nx*colMM, p.y+p.ny*colMM, zRow);
+}
+function makePanoVP(){
+  return makeViewport({id:'pano',paneSel:'#panePano',shortName:'全景',allowWL:true,allowMeasure:true,
+    ready:()=>!!State.volume&&!!State.arch.samples,
+    getSig:()=>'pano|'+(State.arch.samples?State.arch.samples.length:0)+'|'+State.arch.slab+'|'+State.cross.z+'|'+State.ww+'|'+State.wl+'|'+State.arch._ver+'|'+State.panoFlip,
+    build:()=>{
+      const v=State.volume,S=State.arch.samples,W=S.length,H=v.nz;
+      const half=State.arch.slab/2, bandN=Math.max(1,Math.round(State.arch.slab/v.sx));
+      const buf=grayBuffer(W,H,(col,row)=>{
+        const p=S[col];const z=State.panoFlip?(H-1-row):row;let sum=0,cnt=0;
+        for(let b=0;b<bandN;b++){const d=-half+ (bandN>1? b*(State.arch.slab/(bandN-1)) : 0);
+          sum+=triSample(p.x+p.nx*d,p.y+p.ny*d,z);cnt++;}
+        return sum/cnt;
+      });
+      return{buf,w:W,h:H,mmx:State.arch.stepMM,mmy:v.sz};
+    },
+    sampleRaw:(col,row)=>{const S=State.arch.samples;if(!S)return 0;const p=S[clamp(col,0,S.length-1)];const z=State.panoFlip?(State.volume.nz-1-row):row;return triSample(p.x,p.y,clamp(z,0,State.volume.nz-1));},
+    cornerText:()=>'全景 '+(State.arch.samples?fmt((State.arch.samples.length-1)*State.arch.stepMM,0)+'mm':''),
+    onClick:(img,e,vp)=>{ if(State.tool==='navigate'){ State.arch.pos=clamp(img.u/vp.imgW,0,1); $('#archPos').value=Math.round(State.arch.pos*100); renderImplant(); return false;} return false; },
+    overlay:(ctx,vp)=>{
+      const ap=archPointAt(State.arch.pos);if(ap){const s=vp.imgToScreen(ap.i,0),s2=vp.imgToScreen(ap.i,vp.imgH);
+        ctx.save();ctx.strokeStyle='rgba(167,139,250,.9)';ctx.lineWidth=1.6*DPR;ctx.setLineDash([5*DPR,4*DPR]);
+        ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s2.x,s2.y);ctx.stroke();ctx.restore();}
+      // implant + nerve column markers
+      ctx.save();
+      State.implants.forEach(im=>{const s=vp.imgToScreen(im.arch,0);ctx.fillStyle=im===State.selImp?'#c4b5fd':'rgba(167,139,250,.6)';ctx.fillRect(s.x-2*DPR,vp._draw.dy,4*DPR,vp._draw.dh);});
+      ctx.restore();
+    }
+  });
+}
+/* cross-section viewport */
+const CROSS_W_MM=26;                          // 每张横断面宽度(mm),加宽以铺满窗口
+const CROSS_OFFS=[-4,-3,-2,-1,0,1,2,3,4];     // 沿牙弓偏移(mm),以轴线(0)为中心,共9张
+const CROSS_N=CROSS_OFFS.length, CROSS_CENTER=(CROSS_N-1)>>1;
+const CROSS_VBAND_MM=60;                      // 纵向只显示牙槽区一段(mm),以画弓形的轴位层为中心
+function crossVBand(){
+  const v=State.volume,half=Math.round((CROSS_VBAND_MM/2)/v.sz),zc=clamp(State.cross.z,0,v.nz-1);
+  const z0=clamp(zc-half,0,v.nz-1),z1=clamp(zc+half,0,v.nz-1);
+  return {z0,z1,h:Math.max(2,z1-z0+1)};
+}
+function rowToVolZ(row){const b=crossVBand();return State.panoFlip?(b.z1-row):(b.z0+row);}
+function volZToRow(volZ){const b=crossVBand();return State.panoFlip?(b.z1-volZ):(volZ-b.z0);}
+function crossLayout(){
+  const v=State.volume,step=v.sx,subW=Math.round(CROSS_W_MM/step),gap=Math.max(3,Math.round(1.2/step));
+  return {step,subW,gap,pitch:subW+gap,W:subW*CROSS_N+gap*(CROSS_N-1),H:crossVBand().h};
+}
+function crossArchIdx(sub){const ap=archPointAt(State.arch.pos);if(!ap||!State.arch.samples)return 0;return clamp(ap.i+Math.round(CROSS_OFFS[sub]/State.arch.stepMM),0,State.arch.samples.length-1);}
+function crossColToSub(col){const {subW,pitch}=crossLayout();const sub=Math.floor(col/pitch);if(sub<0||sub>=CROSS_N)return null;const local=col-sub*pitch;if(local>subW)return null;return {sub,local};}
+function subOriginX(sub){return sub*crossLayout().pitch;}
+function crossToImgSub(sub,colMM,zMM){const {step,subW}=crossLayout();return {u:subOriginX(sub)+subW/2+colMM/step,v:volZToRow(zMM/State.volume.sz)};}
+function makeCrossVP(){
+  return makeViewport({id:'cross',paneSel:'#paneCross',shortName:'横断',allowWL:true,allowMeasure:true,
+    ready:()=>!!State.volume&&!!State.arch.samples,
+    getSig:()=>'cross9|'+State.arch.pos.toFixed(4)+'|'+State.cross.z+'|'+State.ww+'|'+State.wl+'|'+(State.arch.samples?State.arch.samples.length:0)+'|'+State.arch._ver+'|'+State.panoFlip,
+    build:()=>{
+      const v=State.volume,S=State.arch.samples;if(!S)return null;
+      const {step,subW,pitch,W,H}=crossLayout();
+      const pts=CROSS_OFFS.map((o,i)=>S[crossArchIdx(i)]);
+      const buf=grayBuffer(W,H,(col,row)=>{
+        const sub=Math.floor(col/pitch),local=col-sub*pitch;
+        if(sub<0||sub>=CROSS_N||local>=subW)return v.vmin;
+        const p=pts[sub],d=(local-subW/2)*step,z=rowToVolZ(row);
+        return triSample(p.x+p.nx*d,p.y+p.ny*d,z);
+      });
+      return{buf,w:W,h:H,mmx:step,mmy:v.sz};
+    },
+    sampleRaw:(col,row)=>{const v=State.volume,S=State.arch.samples;if(!S)return 0;const r=crossColToSub(col);if(!r)return v.vmin;const {step,subW}=crossLayout();const p=S[crossArchIdx(r.sub)];const d=(r.local-subW/2)*step;return triSample(p.x+p.nx*d,p.y+p.ny*d,clamp(rowToVolZ(row),0,v.nz-1));},
+    cornerText:()=>{const ap=archPointAt(State.arch.pos);return ap?(CROSS_N+'×断面 · 中 '+(ap.i+1)+'/'+State.arch.samples.length+' · 间隔1mm'):'';},
+    onScroll:(dir)=>{const S=State.arch.samples;if(!S)return;const i=clamp(Math.round(State.arch.pos*(S.length-1))+dir,0,S.length-1);State.arch.pos=i/(S.length-1);$('#archPos').value=Math.round(State.arch.pos*100);renderImplant();},
+    onClick:(img,e,vp)=>{
+      if(e.button!==0)return false;
+      const r=crossColToSub(img.u);if(!r)return false; // 点在间隙
+      if(State.pendingImp){placeImplantAt(vp,img,r);return false;}
+      if(State.tool==='nerve'){markNerveAt(vp,img,r);return false;}
+      const im=hitImplant(vp,img);
+      if(im){State.selImp=im;vp._dragImp=im;syncImpAngle();renderImpList();return true;}
+      return false;
+    },
+    onDrag:(img,vp)=>{if(vp._dragImp){const r=crossColToSub(img.u);if(!r)return;const v=State.volume,{step,subW}=crossLayout();vp._dragImp.arch=crossArchIdx(r.sub);vp._dragImp.colMM=(r.local-subW/2)*step;vp._dragImp.topMM=rowToVolZ(img.v)*v.sz;computeSafety(vp._dragImp);renderImplant();renderImpList();}},
+    onDragEnd:()=>{VP.cross._dragImp=null;},
+    overlay:(ctx,vp)=>{drawCrossOverlay(ctx,vp);}
+  });
+}
+function drawCrossOverlay(ctx,vp){
+  const v=State.volume,S=State.arch.samples;if(!S)return;
+  const {subW}=crossLayout();
+  ctx.save();
+  for(let i=0;i<CROSS_N;i++){
+    const x0=subOriginX(i),a=vp.imgToScreen(x0,0),b=vp.imgToScreen(x0+subW,vp.imgH);
+    if(i===CROSS_CENTER){ctx.strokeStyle='rgba(45,212,191,.7)';ctx.lineWidth=1.6*DPR;ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);}
+    else{ctx.strokeStyle='rgba(167,139,250,.22)';ctx.lineWidth=1*DPR;ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);}
+    const lab=(CROSS_OFFS[i]>0?'+':'')+CROSS_OFFS[i];
+    label(ctx,i===CROSS_CENTER?'0 轴':lab,a.x+4*DPR,a.y+13*DPR,i===CROSS_CENTER?'#2dd4bf':'#a78bfa');
+  }
+  for(let i=0;i<CROSS_N;i++){const ai=crossArchIdx(i);
+    State.nerve.filter(n=>Math.abs(n.arch-ai)<=1).forEach(n=>{const p=crossToImgSub(i,n.colMM,n.zMM),s=vp.imgToScreen(p.u,p.v);
+      ctx.fillStyle='#fb7185';ctx.beginPath();ctx.arc(s.x,s.y,3.5*DPR,0,7);ctx.fill();
+      ctx.strokeStyle='rgba(251,113,133,.5)';ctx.lineWidth=1*DPR;ctx.beginPath();ctx.arc(s.x,s.y,7*DPR,0,7);ctx.stroke();});
+    State.implants.filter(im=>Math.abs(im.arch-ai)<=1).forEach(im=>drawImplant(ctx,vp,im,i));
+  }
+  ctx.restore();
+}
+function drawImplant(ctx,vp,im,sub){
+  const v=State.volume,top=crossToImgSub(sub,im.colMM,im.topMM);
+  const s=vp.imgToScreen(top.u,top.v),fit=vp._draw.fit;
+  const wPx=im.dia*fit, lPx=im.len*fit, ang=im.ang*Math.PI/180;
+  ctx.save();ctx.translate(s.x,s.y);ctx.rotate(ang);
+  const sel=im===State.selImp;
+  ctx.fillStyle=sel?'rgba(196,181,253,.5)':'rgba(167,139,250,.4)';
+  ctx.strokeStyle=sel?'#ddd6fe':'#a78bfa';ctx.lineWidth=1.6*DPR;
+  const bodyL=lPx*0.82;
+  ctx.beginPath();ctx.moveTo(-wPx/2,0);ctx.lineTo(wPx/2,0);ctx.lineTo(wPx/2,bodyL);ctx.lineTo(0,lPx);ctx.lineTo(-wPx/2,bodyL);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle=sel?'rgba(221,214,254,.7)':'rgba(167,139,250,.6)';ctx.lineWidth=1*DPR;
+  for(let y=4*DPR;y<bodyL;y+=Math.max(4*DPR,wPx*0.28)){ctx.beginPath();ctx.moveTo(-wPx/2,y);ctx.lineTo(wPx/2,y+2*DPR);ctx.stroke();}
+  ctx.fillStyle=sel?'#ddd6fe':'#a78bfa';ctx.fillRect(-wPx/2-1*DPR,-2*DPR,wPx+2*DPR,2*DPR);
+  ctx.restore();
+  if(sub===CROSS_CENTER)label(ctx,'Ø'+im.dia+'×'+im.len,s.x+wPx/2+5*DPR,s.y+6*DPR,sel?'#ddd6fe':'#a78bfa');
+}
+function hitImplant(vp,img){
+  const v=State.volume;let best=null,bd=10;
+  for(let i=0;i<CROSS_N;i++){const ai=crossArchIdx(i);
+    State.implants.forEach(im=>{if(Math.abs(im.arch-ai)>1)return;
+      const top=crossToImgSub(i,im.colMM,im.topMM);
+      const du=(img.u-top.u)*v.sx,dv=(img.v-(top.v+im.len/v.sz/2))*v.sz;
+      const dist=Math.hypot(du,dv);if(dist<bd){bd=dist;best=im;}});
+  }
+  return best;
+}
+function placeImplantAt(vp,img,r){
+  const v=State.volume,{step,subW}=crossLayout(),archIdx=crossArchIdx(r.sub);
+  const im={id:State.impId++,arch:archIdx,colMM:(r.local-subW/2)*step,topMM:rowToVolZ(img.v)*v.sz,ang:+$('#impAngle').value,
+    dia:parseFloat($('#impDia').value),len:parseFloat($('#impLen').value),safety:null};
+  State.implants.push(im);State.selImp=im;State.pendingImp=false;$('#placeImp').classList.remove('primary');$('#placeImp').textContent='在横断面点击放置';
+  computeSafety(im);renderImplant();renderImpList();banner(null);toast('已放置种植体 Ø'+im.dia+'×'+im.len);
+}
+function markNerveAt(vp,img,r){
+  const v=State.volume,{step,subW}=crossLayout();
+  State.nerve.push({arch:crossArchIdx(r.sub),colMM:(r.local-subW/2)*step,zMM:rowToVolZ(img.v)*v.sz});
+  State.implants.forEach(computeSafety);renderImplant();renderImpList();toast('已标记神经管点');
+}
+function computeSafety(im){
+  // apex point in cross-section mm coords
+  const ax=im.colMM+Math.sin(im.ang*Math.PI/180)*im.len, az=im.topMM+Math.cos(im.ang*Math.PI/180)*im.len;
+  let best=null;
+  State.nerve.forEach(n=>{if(Math.abs(n.arch-im.arch)>3)return;const d=Math.hypot(n.colMM-ax,n.zMM-az);if(best==null||d<best)best=d;});
+  im.safety=best;
+}
+function syncImpAngle(){if(State.selImp){$('#impAngle').value=State.selImp.ang;$('#impAngleVal').textContent=State.selImp.ang+'°';}}
+function renderImpList(){
+  $('#impCount').textContent=State.implants.length?'('+State.implants.length+')':'';
+  const wrap=$('#impList');wrap.innerHTML='';
+  State.implants.forEach((im,i)=>{const c=document.createElement('div');c.className='imp-card'+(im===State.selImp?' sel':'');
+    let safe='';if(im.safety!=null){const cls=im.safety>=2?'ok':im.safety>=1?'warn':'bad';safe=`<div class="safe ${cls}">距神经管 ${fmt(im.safety,1)} mm ${im.safety<2?'⚠':'✓'}</div>`;}
+    c.innerHTML=`<div class="top"><span class="nm">种植体 ${i+1}</span><span class="del" data-i="${i}">×</span></div>
+      <div class="spec">Ø${im.dia} × ${im.len}mm · 倾角 ${im.ang}°</div>${safe}`;
+    c.onclick=(e)=>{if(e.target.classList.contains('del')){State.implants.splice(i,1);if(State.selImp===im)State.selImp=null;renderImplant();renderImpList();return;}State.selImp=im;syncImpAngle();renderImplant();renderImpList();};
+    wrap.appendChild(c);});
+}
+function renderImplant(){State.arch._ver=(State.arch._ver||0)+1;['arch','pano','cross'].forEach(id=>VP[id]&&VP[id].render());$('#archPosVal').textContent=State.arch.samples?('第 '+(Math.round(State.arch.pos*(State.arch.samples.length-1))+1)+'/'+State.arch.samples.length+' 断面'):'—';}
+
+/* ====================== CEPH (ortho) ====================== */
+const CEPH_LANDMARKS=[
+  ['S','蝶鞍'],['N','鼻根'],['A','上齿槽座'],['B','下齿槽座'],['Po','耳点'],['Or','眶点'],
+  ['ANS','前鼻棘'],['PNS','后鼻棘'],['Go','下颌角'],['Gn','颏顶'],['Me','颏下'],['Pog','颏前']
+];
+function buildCephImage(){
+  const v=State.volume;showLoader(true,'生成合成侧位片…');setProgress(0);
+  const W=v.ny,H=v.nz,img=new Float32Array(W*H);
+  const mip=State.ceph.proj==='mip';
+  return new Promise(resolve=>{
+    let z=0;
+    function chunk(){
+      const end=Math.min(z+24,H);
+      for(;z<end;z++){
+        for(let y=0;y<W;y++){
+          let acc=mip?-99999:0;
+          const base=z*v.nx*v.ny+y*v.nx;
+          for(let x=0;x<v.nx;x++){const val=v.data[base+x];if(mip){if(val>acc)acc=val;}else acc+=val;}
+          img[z*W+y]=mip?acc:acc/v.nx;
+        }
+      }
+      setProgress(z/H);
+      if(z<H){requestAnimationFrame(chunk);} else {
+        let mn=1e9,mx=-1e9;for(let i=0;i<img.length;i++){if(img[i]<mn)mn=img[i];if(img[i]>mx)mx=img[i];}
+        State.ceph.img=img;State.ceph.w=W;State.ceph.h=H;State.ceph.min=mn;State.ceph.max=mx;
+        showLoader(false);resolve();
+      }
+    }
+    chunk();
+  });
+}
+function makeCephVP(){
+  return makeViewport({id:'ceph',paneSel:'#paneCeph',shortName:'侧位',allowWL:true,allowMeasure:true,
+    ready:()=>!!State.volume&&!!State.ceph.img,
+    getSig:()=>'ceph|'+State.ceph.proj+'|'+State.ceph.flipH+'|'+State.ww+'|'+State.wl+'|'+State.ceph.w+'|'+State.panoFlip,
+    build:()=>{const v=State.volume,W=State.ceph.w,H=State.ceph.h,im=State.ceph.img,fh=State.ceph.flipH;
+      const buf=grayBuffer(W,H,(x,y)=>{const row=State.panoFlip?(H-1-y):y;return im[row*W+(fh?(W-1-x):x)];});return{buf,w:W,h:H,mmx:v.sy,mmy:v.sz};},
+    sampleRaw:(x,y)=>{if(!State.ceph.img)return 0;const W=State.ceph.w,H=State.ceph.h,fh=State.ceph.flipH;const row=State.panoFlip?(H-1-clamp(y,0,H-1)):clamp(y,0,H-1);return State.ceph.img[row*W+(fh?W-1-clamp(x,0,W-1):clamp(x,0,W-1))];},
+    cornerText:()=>State.ceph.proj.toUpperCase(),
+    onClick:(img,e,vp)=>{
+      if(State.ceph.active){const k=State.ceph.active;State.ceph.landmarks[k]={u:img.u,v:img.v};advanceLandmark();computeCeph();renderCeph();renderLmkGrid();return false;}
+      return false;
+    },
+    overlay:(ctx,vp)=>{drawCephOverlay(ctx,vp);}
+  });
+}
+function lmkToMM(k){const p=State.ceph.landmarks[k];if(!p)return null;const v=State.volume;return{x:p.u*v.sy,y:p.v*v.sz};}
+function drawCephOverlay(ctx,vp){
+  const L=State.ceph.landmarks;
+  // connection lines for planes
+  const line=(a,b,col)=>{const A=L[a],B=L[b];if(!A||!B)return;const sa=vp.imgToScreen(A.u,A.v),sb=vp.imgToScreen(B.u,B.v);ctx.strokeStyle=col;ctx.lineWidth=1.4*DPR;ctx.beginPath();ctx.moveTo(sa.x,sa.y);ctx.lineTo(sb.x,sb.y);ctx.stroke();};
+  ctx.save();
+  line('S','N','rgba(96,165,250,.8)');line('N','A','rgba(45,212,191,.8)');line('N','B','rgba(251,191,36,.8)');
+  line('Po','Or','rgba(167,139,250,.7)');line('Go','Me','rgba(251,113,133,.7)');line('ANS','PNS','rgba(74,222,128,.6)');
+  Object.keys(L).forEach(k=>{const p=L[k],s=vp.imgToScreen(p.u,p.v);
+    ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(s.x,s.y,3.5*DPR,0,7);ctx.fill();
+    ctx.fillStyle='#e6edf3';ctx.font=(11*DPR)+'px monospace';ctx.fillText(k,s.x+5*DPR,s.y-4*DPR);});
+  if(State.ceph.active){ctx.fillStyle='rgba(251,191,36,.9)';ctx.font=(12*DPR)+'px monospace';ctx.fillText('正在定位: '+State.ceph.active,vp._draw.dx+10*DPR,vp._draw.dy+22*DPR);}
+  ctx.restore();
+}
+function advanceLandmark(){const done=State.ceph.landmarks;const next=CEPH_LANDMARKS.find(([k])=>!done[k]);State.ceph.active=next?next[0]:null;updateLmkProg();}
+function updateLmkProg(){const n=Object.keys(State.ceph.landmarks).length;$('#lmkProg').textContent=n+'/'+CEPH_LANDMARKS.length;}
+function renderLmkGrid(){const g=$('#lmkGrid');g.innerHTML='';CEPH_LANDMARKS.forEach(([k,zh])=>{const el=document.createElement('div');
+  el.className='lmk'+(State.ceph.landmarks[k]?' done':'')+(State.ceph.active===k?' active':'');el.textContent=k+' '+zh;
+  el.onclick=()=>{State.ceph.active=k;renderLmkGrid();renderCeph();};g.appendChild(el);});updateLmkProg();}
+function angleABC(A,B,C){const v1={x:A.x-B.x,y:A.y-B.y},v2={x:C.x-B.x,y:C.y-B.y};let cs=(v1.x*v2.x+v1.y*v2.y)/(Math.hypot(v1.x,v1.y)*Math.hypot(v2.x,v2.y));return Math.acos(clamp(cs,-1,1))*180/Math.PI;}
+function lineAngle(A,B){return Math.atan2(B.y-A.y,B.x-A.x)*180/Math.PI;}
+function angBetween(a,b){let d=Math.abs(a-b)%180;return d>90?180-d:d;}
+function computeCeph(){
+  const g=k=>lmkToMM(k);
+  const rows=[];
+  const S=g('S'),N=g('N'),A=g('A'),B=g('B'),Po=g('Po'),Or=g('Or'),Go=g('Go'),Me=g('Me');
+  const add=(name,val,norm,lo,hi)=>{if(val==null)return;const st=val<lo?'lo':val>hi?'hi':'ok';rows.push({name,val,norm,st});};
+  if(S&&N&&A)add('SNA',angleABC(S,N,A),'82±2',80,84);
+  if(S&&N&&B)add('SNB',angleABC(S,N,B),'80±2',78,82);
+  if(S&&N&&A&&B)add('ANB',angleABC(S,N,A)-angleABC(S,N,B),'2±2',0,4);
+  if(S&&N&&Go&&Me)add('SN-MP 下颌平面角',angBetween(lineAngle(S,N),lineAngle(Go,Me)),'32±5',27,37);
+  if(Po&&Or&&Go&&Me)add('FMA (FH-MP)',angBetween(lineAngle(Po,Or),lineAngle(Go,Me)),'25±4',21,29);
+  if(N&&A&&Po&&Or)add('FH-NA 面角',angBetween(lineAngle(Po,Or),lineAngle(N,A)),'—',0,180);
+  // render table
+  const tb=$('#cephTbody');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="4" style="color:var(--ink-faint);text-align:center;padding:10px">完成标志点后自动计算</td></tr>';return;}
+  tb.innerHTML='';rows.forEach(r=>{const tr=document.createElement('tr');
+    const stTxt=r.st==='ok'?'正常':r.st==='hi'?'偏大':'偏小';
+    tr.innerHTML=`<td>${r.name}</td><td class="v">${fmt(r.val,1)}°</td><td style="text-align:right;color:var(--ink-faint)">${r.norm}</td><td class="st ${r.st}">${stTxt}</td>`;tb.appendChild(tr);});
+  State.ceph.results=rows;
+}
+function renderCeph(){VP.ceph&&VP.ceph.render();}
+
+/* ====================== STL ====================== */
+let stlScene,stlCam,stlRenderer,stlControls,stlMesh,stlRaf,stlMarkers=[],stlPick=[];State.stlMeasures=[];
+function initStl(){
+  if(stlRenderer)return true;const stage=$('#stlStage');
+  if(typeof THREE==='undefined'){toast('三维库(three.js)未加载,请联网后刷新页面','err');return false;}
+  try{
+    stlScene=new THREE.Scene();stlScene.background=new THREE.Color(0x05080c);
+    var w=stage.clientWidth||stage.parentElement.clientWidth||800, h=stage.clientHeight||stage.parentElement.clientHeight||600;
+    stlCam=new THREE.PerspectiveCamera(45,w/h||1.6,0.1,5000);stlCam.position.set(0,0,120);
+    stlRenderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});stlRenderer.setPixelRatio(DPR);stlRenderer.setSize(w,h);
+    stage.appendChild(stlRenderer.domElement);
+  }catch(err){toast('三维渲染初始化失败(WebGL 不可用):'+err.message,'err');stlRenderer=null;return false;}
+  if(THREE.OrbitControls){stlControls=new THREE.OrbitControls(stlCam,stlRenderer.domElement);stlControls.enableDamping=true;stlControls.dampingFactor=0.08;}
+  else{stlControls={update:function(){},target:{set:function(){}}};toast('OrbitControls 未加载,模型可显示但无法旋转','warn');}
+  // 银色渲染照明(高光对比强,表面细节清晰)
+  const k=new THREE.DirectionalLight(0xffffff,0.9);k.position.set(1,1,1);stlScene.add(k);
+  const f=new THREE.DirectionalLight(0x88bbff,0.4);f.position.set(-1,-0.5,-1);stlScene.add(f);
+  stlScene.add(new THREE.AmbientLight(0x404a58,0.8));
+  const grid=new THREE.GridHelper(200,20,0x243140,0x161e29);grid.rotation.x=Math.PI/2;stlScene.add(grid);
+  stlRenderer.domElement.addEventListener('click',onStlClick);
+  (function loop(){stlRaf=requestAnimationFrame(loop);stlControls.update();stlRenderer.render(stlScene,stlCam);})();
+  return true;
+}
+function loadStl(files){
+  if(typeof THREE==='undefined'){toast('三维库(three.js)未加载,请联网后刷新','err');return;}
+  if(!THREE.STLLoader){toast('STLLoader 未加载,请联网后刷新页面','err');return;}
+  // 先让三维舞台可见,渲染器才能以正确尺寸创建
+  $('#emptyState').classList.add('hidden');
+  $$('.layout').forEach(l=>l.classList.remove('on'));
+  $('#stlStage').style.display='block';
+  if(!initStl())return;
+  requestAnimationFrame(resizeStl);
+  const loader=new THREE.STLLoader(),f=files[0];showLoader(true,'解析 STL 网格…');
+  const reader=new FileReader();
+  reader.onload=ev=>{try{
+    const geo=loader.parse(ev.target.result);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
+    if(stlMesh){stlScene.remove(stlMesh);stlMesh.geometry.dispose();}
+    stlMesh=new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:0xd8e0e8,specular:0x335566,shininess:18,side:THREE.DoubleSide}));
+    const c=geo.boundingBox.getCenter(new THREE.Vector3());stlMesh.position.set(-c.x,-c.y,-c.z);stlScene.add(stlMesh);
+    const size=geo.boundingBox.getSize(new THREE.Vector3()),r=geo.boundingSphere.radius||50;
+    stlCam.position.set(0,0,r*2.6);stlCam.near=Math.max(0.01,r/100);stlCam.far=r*20;stlCam.updateProjectionMatrix();stlControls.target.set(0,0,0);stlControls.update();
+    const tris=geo.attributes.position.count/3;
+    $('#stlName').textContent=f.name;$('#stlTris').textContent=Math.round(tris).toLocaleString();$('#stlSize').textContent=fmt(size.x,1)+'×'+fmt(size.y,1)+'×'+fmt(size.z,1);
+    State.stlMeasures=[];clearStlMarkers();renderMeasureList();
+    $('#emptyState').classList.add('hidden');$('#dataPill').classList.add('live');$('#dataState').textContent='STL '+Math.round(tris/1000)+'k 面';
+    $('#snapBtn').disabled=false;$('#sendCommBtn').disabled=false;$('#reportBtn').disabled=false;switchMod('stl');requestAnimationFrame(resizeStl);showLoader(false);toast('STL 已载入');
+  }catch(err){showLoader(false);toast('STL 解析失败:'+(err&&err.message||err),'err');}};
+  reader.onerror=()=>{showLoader(false);toast('读取 STL 文件出错','err');};
+  reader.readAsArrayBuffer(f);
+}
+function onStlClick(e){
+  if(State.tool!=='length'&&State.tool!=='angle'||!stlMesh)return;
+  const r=stlRenderer.domElement.getBoundingClientRect();
+  const m=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  const ray=new THREE.Raycaster();ray.setFromCamera(m,stlCam);const hits=ray.intersectObject(stlMesh,true);if(!hits.length)return;
+  const p=hits[0].point.clone();stlPick.push(p);addStlMarker(p);
+  const need=State.tool==='angle'?3:2;
+  if(stlPick.length>=need){
+    if(State.tool==='length'){const d=stlPick[0].distanceTo(stlPick[1]);State.stlMeasures.push({stl:true,type:'length',value:d,color:'#fbbf24',label:'STL 线距'});drawStlLine(stlPick[0],stlPick[1],0xfbbf24);}
+    else{const a=stlPick[0].clone().sub(stlPick[1]),b=stlPick[2].clone().sub(stlPick[1]);State.stlMeasures.push({stl:true,type:'angle',value:a.angleTo(b)*180/Math.PI,color:'#60a5fa',label:'STL 角度'});drawStlLine(stlPick[1],stlPick[0],0x60a5fa);drawStlLine(stlPick[1],stlPick[2],0x60a5fa);}
+    stlPick=[];renderMeasureList();toast('已记录三维测量');
+  }
+}
+function addStlMarker(p){const m=new THREE.Mesh(new THREE.SphereGeometry(0.6,12,12),new THREE.MeshBasicMaterial({color:0x2dd4bf}));m.position.copy(p);stlScene.add(m);stlMarkers.push(m);}
+function drawStlLine(a,b,c){const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),new THREE.LineBasicMaterial({color:c}));stlScene.add(l);stlMarkers.push(l);}
+function clearStlMarkers(){stlMarkers.forEach(m=>stlScene.remove(m));stlMarkers=[];stlPick=[];}
+function resizeStl(){if(!stlRenderer)return;const s=$('#stlStage');if(!s.clientWidth)return;stlCam.aspect=s.clientWidth/s.clientHeight;stlCam.updateProjectionMatrix();stlRenderer.setSize(s.clientWidth,s.clientHeight);}
+
+/* ====================== window / tools / module switch ====================== */
+function setWindow(ww,wl){State.ww=ww;State.wl=wl;$('#wwVal').textContent=ww;$('#wlVal').textContent=wl;$('#wwTick').textContent=ww;$('#wlTick').textContent=wl;
+  $('#wwSlider').value=Math.min(ww,+$('#wwSlider').max);$('#wlSlider').value=clamp(wl,+$('#wlSlider').min,+$('#wlSlider').max);
+  $$('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.ww===ww&&+c.dataset.wl===wl));}
+function setTool(t){State.tool=t;activeDraft=null;$$('.tool').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
+  $('#toolState').textContent=({navigate:'定位',length:'线距',angle:'角度',hu:'灰度',nerve:'神经管'})[t]||t;renderModule();}
+function updatePos(){const c=State.cross;$('#posState').textContent='X'+c.x+' Y'+c.y+' Z'+c.z;}
+
+function renderModule(){
+  if(State.mod==='mpr')renderMpr();
+  else if(State.mod==='implant')renderImplant();
+  else if(State.mod==='ceph')renderCeph();
+}
+
+/* ====================== 视图放大 / 还原 ====================== */
+function injectMaxButtons(){
+  document.querySelectorAll('.stage .pane').forEach(pane=>{
+    if(pane.querySelector('.pane-max'))return;
+    const btn=document.createElement('button');btn.className='pane-max';btn.title='放大 / 还原 (Esc 还原)';
+    btn.innerHTML='<svg class="ic-expand" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke-linecap="round"/></svg>'+
+                  '<svg class="ic-restore" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke-linecap="round"/></svg>';
+    btn.addEventListener('mousedown',e=>{e.stopPropagation();});
+    btn.addEventListener('click',e=>{e.stopPropagation();toggleMaximize(pane);});
+    pane.appendChild(btn);
+  });
+}
+function clearMaximize(){let any=false;document.querySelectorAll('.pane.maximized').forEach(p=>{p.classList.remove('maximized');any=true;});return any;}
+function refreshAllViews(){requestAnimationFrame(()=>{Object.values(VP).forEach(v=>v.render&&v.render());if(typeof resizeStl==='function')resizeStl();});}
+function toggleMaximize(pane){
+  const was=pane.classList.contains('maximized');
+  clearMaximize();
+  if(!was)pane.classList.add('maximized');
+  refreshAllViews();
+}
+
+function switchMod(mod){
+  State.mod=mod;
+  clearMaximize();
+  $$('#modeTab button').forEach(b=>b.classList.toggle('on',b.dataset.mod===mod));
+  $('#modState').textContent=({mpr:'影像MPR',implant:'种植规划',ceph:'正畸头影',stl:'三维STL'})[mod];
+  // layouts
+  $$('.layout').forEach(l=>l.classList.remove('on'));
+  $('#stlStage').style.display='none';
+  const hasVol=!!State.volume;
+  // sidebar sections
+  show('#toolsSec',mod==='mpr'||mod==='implant');
+  show('#archSec',mod==='implant');
+  show('#implantSec',mod==='implant');
+  show('#wlSec',mod!=='stl');
+  show('#adjSec',mod!=='stl');
+  show('#cephSec',mod==='ceph');
+  show('#cephResultSec',mod==='ceph');
+  show('#metaSec',true);show('#measSec',mod!=='stl');
+  // tool set per module
+  rebuildToolGrid(mod);
+
+  if(mod==='stl'){
+    if(stlMesh){$('#stlStage').style.display='block';$('#emptyState').classList.add('hidden');requestAnimationFrame(resizeStl);}
+    else{$('#stlStage').style.display='none';$('#emptyState').classList.remove('hidden');}
+    banner(null);return;
+  }
+  if(!hasVol){$('#emptyState').classList.remove('hidden');banner(null);return;}
+  $('#emptyState').classList.add('hidden');
+
+  if(mod==='mpr'){$('#mprGrid').classList.add('on');banner(null);requestAnimationFrame(()=>{renderMpr();});}
+  else if(mod==='implant'){$('#implantLayout').classList.add('on');
+    if(!State.arch.samples)banner('① 在左侧 <b>轴位</b> 沿牙槽嵴点击 ≥3 点定义牙弓曲线,或点「自动弓形」');else banner(null);
+    requestAnimationFrame(()=>{['arch','pano','cross'].forEach(id=>VP[id]&&VP[id].render());});}
+  else if(mod==='ceph'){$('#cephLayout').classList.add('on');
+    if(!State.ceph.img){buildCephImage().then(()=>{advanceLandmark();renderLmkGrid();renderCeph();banner('② 依次点亮左侧标志点并在片上定位,系统自动完成头影测量',(State.ceph.active?'blue':''));});}
+    else{renderLmkGrid();renderCeph();}
+  }
+}
+function show(sel,on){$(sel).classList.toggle('hidden',!on);}
+function rebuildToolGrid(mod){
+  const base=[['navigate','定位'],['length','线距'],['angle','角度'],['hu','灰度']];
+  if(mod==='implant')base.push(['nerve','神经管']);
+  const grid=$('#toolGrid');grid.innerHTML='';
+  const icons={navigate:'<path d="M12 2v6M12 16v6M2 12h6M16 12h6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.2"/>',
+    length:'<path d="M4 20L20 4M4 20l3-1M4 20l1-3M20 4l-3 1M20 4l-1 3" stroke-linecap="round"/>',
+    angle:'<path d="M5 19h14M5 19L18 6M5 19a8 8 0 016-8" stroke-linecap="round"/>',
+    hu:'<circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/>',
+    nerve:'<path d="M12 3v18M12 6c3 0 4 2 4 4M12 12c-3 0-4 2-4 4" stroke-linecap="round"/>'};
+  base.forEach(([t,nm])=>{const b=document.createElement('button');b.className='tool'+(State.tool===t?' on':'');b.dataset.tool=t;
+    b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">${icons[t]}</svg>${nm}`;b.onclick=()=>setTool(t);grid.appendChild(b);});
+  if(mod!=='implant'&&State.tool==='nerve')setTool('navigate');
+}
+
+function onVolumeReady(){
+  const v=State.volume;
+  $('#emptyState').classList.add('hidden');
+  $('#vDim').innerHTML=v.nx+'×'+v.ny+' <small>px</small>';
+  $('#vSpc').innerHTML=fmt(v.sx,2)+'×'+fmt(v.sy,2)+'×'+fmt(v.sz,2)+' <small>mm</small>';
+  $('#vSlc').textContent=v.nz;$('#vRange').textContent=v.vmin+'~'+v.vmax;
+  $('#metaList').innerHTML=`<dt>患者</dt><dd>${v.meta.pname}</dd><dt>ID</dt><dd>${v.meta.pid}</dd><dt>模态</dt><dd>${v.meta.modality}</dd><dt>序列</dt><dd title="${v.meta.sdesc}">${v.meta.sdesc}</dd><dt>体素</dt><dd>${fmt(v.sx,2)}mm</dd>`;
+  $('#dataPill').classList.add('live');$('#dataState').textContent='DICOM '+v.nz+' 层';
+  $('#snapBtn').disabled=false;$('#sendCommBtn').disabled=false;$('#reportBtn').disabled=false;
+  if(!VP.axial){
+    makeMpr('axial','.pane[data-vp=axial]','轴位');makeMpr('coronal','.pane[data-vp=coronal]','冠状');makeMpr('sagittal','.pane[data-vp=sagittal]','矢状');
+    makeArchVP();makePanoVP();makeCrossVP();makeCephVP();
+  }
+  renderMeasureList();renderImpList();
+  switchMod(State.mod==='stl'?'mpr':State.mod);
+  requestAnimationFrame(()=>{renderModule();updatePos();});
+}
+
+/* ====================== export ====================== */
+function captureCanvas(){
+  let canvas;
+  if(State.mod==='stl'){if(!stlRenderer)return null;stlRenderer.render(stlScene,stlCam);canvas=stlRenderer.domElement;}
+  else{
+    const ids=State.mod==='mpr'?['axial','coronal','sagittal']:State.mod==='implant'?['pano','arch','cross']:['ceph'];
+    const vis=ids.filter(id=>VP[id]&&VP[id]._buf);
+    if(!vis.length && State.mod!=='ceph'){toast('当前模块暂无可截图的影像','warn');return null;}
+    const W=1600,H=1200,out=document.createElement('canvas');out.width=W;out.height=H;const o=out.getContext('2d');o.fillStyle='#05080c';o.fillRect(0,0,W,H);
+    try{
+      if(State.mod==='ceph'){if(VP.ceph)o.drawImage(VP.ceph.canvas,0,0,W,H);}
+      else if(State.mod==='implant'){if(VP.pano)o.drawImage(VP.pano.canvas,0,0,W,H/2);if(VP.arch)o.drawImage(VP.arch.canvas,0,H/2,W/2,H/2);if(VP.cross)o.drawImage(VP.cross.canvas,W/2,H/2,W/2,H/2);}
+      else{const pos=[[0,0],[W/2,0],[0,H/2]];['axial','coronal','sagittal'].forEach((p,i)=>{if(VP[p])o.drawImage(VP[p].canvas,pos[i][0],pos[i][1],W/2,H/2);});}
+    }catch(e){toast('截图合成失败','err');return null;}
+    o.fillStyle='#8b9aab';o.font='13px monospace';o.fillText('DentaView Pro · '+(State.volume?State.volume.meta.pname:'')+' · WW'+State.ww+' WL'+State.wl,20,H-14);
+    canvas=out;
+  }
+  return canvas;
+}
+function captureDataURL(){const c=captureCanvas();if(!c)return null;try{return c.toDataURL('image/png');}catch(e){toast('图像捕获失败:'+e.message,'err');return null;}}
+function dvPostToComm(dataUrl){
+  try{
+    if(window.opener && !window.opener.closed){
+      window.opener.postMessage({type:'dentaview-shot',dataUrl:dataUrl,pname:(State.volume?State.volume.meta.pname:''),mod:State.mod},'*');
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function snapshot(){
+  const dataUrl=captureDataURL();if(!dataUrl)return;
+  const a=document.createElement('a');a.download='dentaview_'+State.mod+'_'+Date.now()+'.png';a.href=dataUrl;a.click();
+  if(dvPostToComm(dataUrl))toast('截图已保存，并已发送到沟通系统');else toast('截图已保存');
+}
+function sendToComm(){
+  const dataUrl=captureDataURL();if(!dataUrl)return;
+  if(dvPostToComm(dataUrl))toast('已发送到沟通系统');
+  else toast('请从沟通系统点「打开 DentaView」进入后再发送','warn');
+}
+function exportReport(){
+  let csv='\uFEFFDentaView Pro 规划报告\r\n导出时间,'+new Date().toLocaleString()+'\r\n';
+  if(State.volume){csv+='患者,'+State.volume.meta.pname+'\r\n患者ID,'+State.volume.meta.pid+'\r\n体素(mm),'+fmt(State.volume.sx,3)+' x '+fmt(State.volume.sy,3)+' x '+fmt(State.volume.sz,3)+'\r\n';}
+  // implants
+  if(State.implants.length){csv+='\r\n[ 种植体规划 ]\r\n序号,直径(mm),长度(mm),倾角(°),弓位,距神经管(mm)\r\n';
+    State.implants.forEach((im,i)=>{csv+=`${i+1},${im.dia},${im.len},${im.ang},${im.arch},${im.safety!=null?fmt(im.safety,1):'-'}\r\n`;});}
+  // measures
+  const all=[...State.measures,...(State.stlMeasures||[])];
+  if(all.length){csv+='\r\n[ 测量记录 ]\r\n序号,类型,数值,单位,标签\r\n';
+    all.forEach((m,i)=>{const u=m.type==='length'?'mm':m.type==='angle'?'度':m.type==='hu'?'灰度':'';const val=m.type==='angle'?fmt(m.value,1):m.type==='hu'?m.value:fmt(m.value,2);csv+=`${i+1},${({length:'线距',angle:'角度',hu:'灰度'})[m.type]||m.type},${val},${u},${m.label}\r\n`;});}
+  // ceph
+  if(State.ceph.results&&State.ceph.results.length){csv+='\r\n[ 头影测量分析 ]\r\n项目,测量值(°),正常值,判读\r\n';
+    State.ceph.results.forEach(r=>{csv+=`${r.name},${fmt(r.val,1)},${r.norm},${r.st==='ok'?'正常':r.st==='hi'?'偏大':'偏小'}\r\n`;});}
+  if(State.aiReport&&State.aiReport.text){
+    const ai=State.aiReport;
+    const aiKind=ai.kind==='pano'?'CBCT 全景重组':'STL 三维视图';
+    const aiSvc=ai.service||'未记录';
+    const aiModel=ai.model||'未记录';
+    const aiTime=ai.ts?new Date(ai.ts).toLocaleString():'未记录';
+    csv+='\r\n[ AI 辅助分析报告 · 非诊断 · 须执业医师复核 ]\r\n';
+    csv+='分析对象,'+aiKind+'\r\n';
+    csv+='分析时间,'+aiTime+'\r\n';
+    csv+='模型,'+aiModel+'\r\n';
+    csv+='服务地址,'+aiSvc+'\r\n';
+    csv+='报告属性,观察性草稿(非诊断)\r\n';
+    csv+='AI 结果正文,"'+ai.text.replace(/"/g,'""')+'"\r\n';
+  }
+  if(!State.implants.length&&!all.length&&!(State.ceph.results&&State.ceph.results.length)&&!State.aiReport){toast('暂无可导出的规划/测量数据','warn');return;}
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dentaview_report_'+Date.now()+'.csv';a.click();toast('报告已导出');
+}
+
+/* ====================== wiring ====================== */
+function syncIpadShell(){
+  if(IS_TOUCH_DEVICE)$('#app').classList.add('touch-ipad');
+  if(IS_TOUCH_DEVICE){
+    const btn=$('#aiUseOllama');
+    if(btn)btn.textContent='清空本机 AI';
+  }
+}
+$('#sidebarToggle').onclick=()=>$('#app').classList.toggle('sidebar-open');
+$('#loadDicom').onclick=$('#loadDicom2').onclick=()=>$('#dicomInput').click();
+$('#loadStl').onclick=$('#loadStl2').onclick=()=>$('#stlInput').click();
+$('#dicomInput').onchange=e=>{if(e.target.files.length)loadDicomFiles(e.target.files);e.target.value='';};
+$('#stlInput').onchange=e=>{if(e.target.files.length)loadStl(e.target.files);e.target.value='';};
+$$('#presetRow .chip').forEach(c=>c.onclick=()=>{setWindow(+c.dataset.ww,+c.dataset.wl);markAllDirty();renderModule();});
+$('#wwSlider').oninput=e=>{setWindow(+e.target.value,State.wl);markAllDirty();renderModule();};
+$('#wlSlider').oninput=e=>{setWindow(State.ww,+e.target.value);markAllDirty();renderModule();};
+function applyAdj(){markAllDirty();renderModule();}
+function refreshAdjUI(){const A=State.adj;$('#briSlider').value=A.bri;$('#conSlider').value=Math.round(A.con*100);$('#sharpSlider').value=Math.round(A.sharp*100);$('#briVal').textContent=A.bri;$('#conVal').textContent=A.con.toFixed(2);$('#sharpVal').textContent=Math.round(A.sharp*100);$('#hdState').textContent=A.hd?'HD 开':'';$('#hdBtn').classList.toggle('primary',!A.hd);}
+$('#briSlider').oninput=e=>{State.adj.bri=+e.target.value;$('#briVal').textContent=e.target.value;applyAdj();};
+$('#conSlider').oninput=e=>{State.adj.con=+e.target.value/100;$('#conVal').textContent=State.adj.con.toFixed(2);applyAdj();};
+$('#sharpSlider').oninput=e=>{State.adj.sharp=+e.target.value/100;$('#sharpVal').textContent=e.target.value;applyAdj();};
+$('#hdBtn').onclick=()=>{const A=State.adj;A.hd=!A.hd;if(A.hd){A.bri=10;A.con=1.4;A.sharp=0.6;}else{A.bri=0;A.con=1;A.sharp=0;}refreshAdjUI();applyAdj();toast(A.hd?'已开启一键 HD 增强':'已关闭 HD');};
+$('#adjReset').onclick=()=>{State.adj={bri:0,con:1,sharp:0,hd:false};refreshAdjUI();applyAdj();};
+
+/* ====================== AI 辅助分析(非诊断) ====================== */
+const AICFG='dv_ai_cfg';
+function aiDefaultUrl(){
+  const h=location.hostname;
+  const localPage=location.protocol==='http:' && /^(localhost|127\.0\.0\.1)$/i.test(h);
+  if(localPage)return location.origin+'/api/ollama/chat';
+  return IS_TOUCH_DEVICE ? '' : 'http://127.0.0.1:8765/api/ollama/chat';
+}
+const AI_LOCAL_DEFAULTS={
+  url:aiDefaultUrl(),
+  key:'',
+  model:'qwen2.5vl'
+};
+function aiApplyLocalDefaults(showToast){
+  $('#aiUrl').value=AI_LOCAL_DEFAULTS.url;
+  $('#aiKey').value=AI_LOCAL_DEFAULTS.key;
+  $('#aiModel').value=AI_LOCAL_DEFAULTS.model;
+  if(showToast)toast('已切换到本机 Ollama');
+}
+function aiLoadCfg(){
+  try{
+    const c=JSON.parse(localStorage.getItem(AICFG)||'null');
+    if(c&&(c.url||c.model||c.key)){
+      $('#aiUrl').value=c.url||AI_LOCAL_DEFAULTS.url;
+      $('#aiKey').value=c.key||'';
+      $('#aiModel').value=c.model||AI_LOCAL_DEFAULTS.model;
+      return;
+    }
+  }catch(e){}
+  aiApplyLocalDefaults(false);
+}
+function aiSaveCfg(silent){try{localStorage.setItem(AICFG,JSON.stringify({url:$('#aiUrl').value.trim(),key:$('#aiKey').value,model:$('#aiModel').value.trim()}));if(!silent)toast('AI 配置已保存(仅本机)');}catch(e){}}
+function aiCapture(kind){
+  let canvas=null;
+  if(kind==='pano'){if(!VP.pano||!VP.pano._buf){toast('请先到种植规划画牙弓生成全景','warn');return null;}canvas=VP.pano.canvas;}
+  else{if(!stlMesh){toast('请先载入 STL 模型','warn');return null;}stlRenderer.render(stlScene,stlCam);canvas=stlRenderer.domElement;}
+  try{return canvas.toDataURL('image/png');}catch(e){toast('图像捕获失败:'+e.message,'err');return null;}
+}
+const AI_SYSTEM='你是牙科影像教学辅助助手,不是医生。你的输出仅供执业医师参考与复核,严禁作为诊断或治疗依据。请基于图像给出客观、结构化的观察性描述草稿,对不确定之处明确标注"需进一步检查/不确定",不要给出确定性诊断或具体治疗方案。用简体中文回答,语言克制谨慎。';
+function aiPrompt(kind){
+  return kind==='pano'
+    ? '这是一张由 CBCT 重组的全景影像。请给结构化观察草稿:\n1. 影像质量与可见范围\n2. 牙列/牙位概览(可见缺失、修复体、种植体等,仅客观描述)\n3. 上下颌骨、上颌窦、下颌管等可见结构的观察要点\n4. 建议医师重点关注或进一步检查的区域(观察性,非诊断)\n5. 复核提示。\n全程强调:这是初步草稿、非诊断,须执业医师确认。'
+    : '这是口内扫描/牙颌模型(STL)的三维视图截图。请给结构化观察草稿:1. 牙弓形态与牙列排列的总体观察 2. 可见的拥挤/间隙/咬合线索(观察性) 3. 建议进一步评估的方面 4. 复核提示。强调非诊断、须医师确认。';
+}
+function aiEsc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+async function aiTestConnection(){
+  const url=$('#aiUrl').value.trim(),key=$('#aiKey').value,model=$('#aiModel').value.trim()||AI_LOCAL_DEFAULTS.model;
+  if(!url){toast('请先填写接口地址','warn');return;}
+  const res=$('#aiResult');
+  res.innerHTML='<span style="color:var(--ink-faint)">正在测试连接…</span>';
+  try{
+    const headers={'Content-Type':'application/json'};
+    if(key)headers['Authorization']='Bearer '+key;
+    const r=await fetch(url,{method:'POST',headers:headers,
+      body:JSON.stringify({model:model,max_tokens:16,temperature:0,messages:[
+        {role:'user',content:[{type:'text',text:'请只回复：连接成功'}]}
+      ]})});
+    if(!r.ok){
+      const t=await r.text().catch(()=>'');
+      res.innerHTML='<span style="color:var(--rose)">连接失败：HTTP '+r.status+'<br>'+aiEsc(t.slice(0,400))+'</span>';
+      return;
+    }
+    const data=await r.json().catch(()=>null);
+    const txt=(data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'连接成功';
+    res.innerHTML='<span class="ai-tag">连接测试成功</span>'+aiEsc(txt);
+  }catch(e){
+    const msg=e&&e.message?e.message:String(e);
+    const hint=/Failed to fetch/i.test(msg)
+      ? '浏览器没有成功连到接口。通常是本机 Ollama 没启动、接口地址不对，或本地网页被浏览器/CORS 限制拦截。若你已启动 Ollama，建议优先使用 Chrome 打开此页面，并确认地址是 http://127.0.0.1:11434/v1/chat/completions 。'
+      : msg;
+    res.innerHTML='<span style="color:var(--rose)">连接测试失败：'+aiEsc(hint)+'</span>';
+  }
+}
+async function aiAnalyze(kind){
+  const url=$('#aiUrl').value.trim(),key=$('#aiKey').value,model=$('#aiModel').value.trim();
+  if(!url||!model){toast('请先填写接口地址与模型','warn');return;}
+  const dataUrl=aiCapture(kind);if(!dataUrl)return;
+  let host='';try{host=new URL(url).hostname;}catch(e){}
+  const local=/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)$/i.test(host);
+  if(!local&&!confirm('图像将上传到「'+(host||'所配置服务')+'」。\n患者影像属敏感信息,确认符合隐私合规后再继续?'))return;
+  aiSaveCfg(true);
+  const res=$('#aiResult');res.innerHTML='<span style="color:var(--ink-faint)">正在请求 AI…(可能需数十秒,请勿关闭)</span>';
+  try{
+    const headers={'Content-Type':'application/json'};
+    if(key)headers['Authorization']='Bearer '+key;
+    const r=await fetch(url,{method:'POST',headers:headers,
+      body:JSON.stringify({model:model,max_tokens:1300,temperature:0.2,messages:[
+        {role:'system',content:AI_SYSTEM},
+        {role:'user',content:[{type:'text',text:aiPrompt(kind)},{type:'image_url',image_url:{url:dataUrl}}]}
+      ]})});
+    if(!r.ok){const t=await r.text().catch(()=>'');res.innerHTML='<span style="color:var(--rose)">请求失败 HTTP '+r.status+'<br>'+aiEsc(t.slice(0,400))+'</span>';return;}
+    const data=await r.json();
+    const txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'(接口无返回内容)';
+    res.innerHTML='<span class="ai-tag">AI 辅助观察草稿 · 非诊断 · 须执业医师复核</span>'+aiEsc(txt);
+    State.aiReport={kind:kind,text:txt,ts:Date.now(),model:model,service:url};
+  }catch(e){res.innerHTML='<span style="color:var(--rose)">请求出错:'+aiEsc(e.message||String(e))+'<br>(常见原因:网络不通、接口地址错误、或浏览器 CORS 限制。云端接口若不允许浏览器直连,建议改用本机视觉模型服务。)</span>';}
+}
+$('#aiBtn').onclick=()=>{$('#aiModal').classList.add('show');aiLoadCfg();};
+$('#aiClose').onclick=()=>$('#aiModal').classList.remove('show');
+$('#aiModal').addEventListener('click',e=>{if(e.target.id==='aiModal')$('#aiModal').classList.remove('show');});
+$('#aiUseOllama').onclick=()=>{
+  if(IS_TOUCH_DEVICE){
+    $('#aiUrl').value='';
+    $('#aiKey').value='';
+    toast('iPad 单机版请改填可访问的 HTTPS AI 接口');
+    return;
+  }
+  aiApplyLocalDefaults(true);
+};
+$('#aiTestConn').onclick=()=>aiTestConnection();
+$('#aiSaveCfg').onclick=()=>aiSaveCfg();
+$('#aiAnalyzePano').onclick=()=>aiAnalyze('pano');
+$('#aiAnalyzeStl').onclick=()=>aiAnalyze('stl');
+$$('#modeTab button').forEach(b=>b.onclick=()=>{if(!State.volume&&b.dataset.mod!=='stl'&&!stlMesh){switchMod(b.dataset.mod);return;}switchMod(b.dataset.mod);});
+$('#snapBtn').onclick=snapshot;$('#sendCommBtn').onclick=sendToComm;$('#reportBtn').onclick=exportReport;
+// arch
+$('#autoArch').onclick=()=>{if(!State.volume)return;autoArch();banner(null);};
+$('#clearArch').onclick=()=>{State.arch.ctrl=[];State.arch.samples=null;buildArch();renderImplant();banner('① 在左侧 <b>轴位</b> 沿牙槽嵴点击 ≥3 点定义牙弓曲线');};
+$('#slabThick').oninput=e=>{State.arch.slab=+e.target.value;$('#slabVal').textContent=e.target.value+' mm';renderImplant();};
+$('#panoFlipBtn').onclick=()=>{State.panoFlip=!State.panoFlip;['pano','cross','coronal','sagittal'].forEach(id=>VP[id]&&VP[id].markDirty());renderImplant();renderMpr();toast('全景/横断面/MPR 已'+(State.panoFlip?'上下翻转':'恢复'));};
+$('#archPos').oninput=e=>{State.arch.pos=+e.target.value/100;renderImplant();};
+// implant
+$('#placeImp').onclick=()=>{State.pendingImp=!State.pendingImp;$('#placeImp').classList.toggle('primary',!State.pendingImp);$('#placeImp').textContent=State.pendingImp?'取消放置':'在横断面点击放置';if(State.pendingImp){banner('在右侧 <b>横断面</b> 点击放置种植体平台位置','teal');}else banner(null);};
+$('#impDia').onchange=()=>{if(State.selImp){State.selImp.dia=parseFloat($('#impDia').value);computeSafety(State.selImp);renderImplant();renderImpList();}};
+$('#impLen').onchange=()=>{if(State.selImp){State.selImp.len=parseFloat($('#impLen').value);computeSafety(State.selImp);renderImplant();renderImpList();}};
+$('#impAngle').oninput=e=>{$('#impAngleVal').textContent=e.target.value+'°';if(State.selImp){State.selImp.ang=+e.target.value;computeSafety(State.selImp);renderImplant();renderImpList();}};
+// ceph
+$('#cephRebuild').onclick=()=>{State.ceph.img=null;buildCephImage().then(()=>{renderCeph();toast('侧位片已重建');});};
+$('#cephProj').onchange=e=>{State.ceph.proj=e.target.value;State.ceph.img=null;buildCephImage().then(()=>renderCeph());};
+$('#cephFlipH').onclick=()=>{State.ceph.flipH=!State.ceph.flipH;if(Object.keys(State.ceph.landmarks).length){if(confirm('翻转会清除已标记的点,继续?')){State.ceph.landmarks={};computeCeph();}else return;}VP.ceph.markDirty();renderCeph();renderLmkGrid();};
+$('#cephClearLmk').onclick=()=>{State.ceph.landmarks={};advanceLandmark();computeCeph();renderCeph();renderLmkGrid();};
+
+// keyboard
+window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  const map={'1':'navigate','2':'length','3':'angle','4':'hu'};if(map[e.key])setTool(map[e.key]);
+  if(e.key==='Escape'){if($('#aiModal').classList.contains('show')){$('#aiModal').classList.remove('show');return;}if(clearMaximize()){refreshAllViews();return;}activeDraft=null;stlPick=[];State.pendingImp=false;$('#placeImp').textContent='在横断面点击放置';banner(null);renderModule();}});
+// drag drop
+const app=$('#app');
+['dragenter','dragover'].forEach(ev=>app.addEventListener(ev,e=>{e.preventDefault();app.classList.add('dropping');}));
+['dragleave','drop'].forEach(ev=>app.addEventListener(ev,e=>{e.preventDefault();}));
+app.addEventListener('drop',e=>{e.preventDefault();app.classList.remove('dropping');const items=[...e.dataTransfer.files];if(!items.length)return;
+  const stls=items.filter(f=>/\.stl$/i.test(f.name)),others=items.filter(f=>!/\.stl$/i.test(f.name));
+  if(stls.length&&!others.length)loadStl(stls);else if(others.length)loadDicomFiles(others);});
+window.addEventListener('resize',()=>{renderModule();resizeStl();});
+window.addEventListener('load',()=>{
+  syncIpadShell();
+  if(IS_TOUCH_DEVICE){
+    toast('iPad 版已启用：建议横屏，双指平移/缩放，DICOM 使用多选文件导入。');
+  }
+  setTimeout(()=>{if(typeof dicomParser==='undefined')toast('DICOM 解析库未加载,请检查网络','err');if(typeof THREE==='undefined')toast('三维库未加载,STL 受限','warn');},1200);
+});
+
+setWindow(State.ww,State.wl);rebuildToolGrid('mpr');injectMaxButtons();
+</script>
+
+
+</body>
+</html>

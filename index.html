@@ -1184,7 +1184,7 @@ function bufFromB64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');const pad=s.leng
   const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
 async function faceIDSupported(){try{return !!(window.PublicKeyCredential&&location.protocol==='https:'&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
 async function renderLock(){const sec=await getSec();const body=document.getElementById('lockBody');
-  const faceBtn=sec.webauthnEnabled?`<button class="btn btn-secondary" onclick="faceIDUnlock()">使用 Face ID 解锁</button>`:'';
+  const faceBtn=sec.webauthnEnabled?`<button class="btn btn-secondary" onclick="faceIDUnlock()">使用 指纹 / Face ID 解锁</button>`:'';
   if(!sec.pinHash){
     body.innerHTML=`<p>首次使用，请设置解锁密码（≥4 位），用于保护本机病例数据。</p>
       <input id="lockPin" type="password" inputmode="numeric" placeholder="设置解锁密码" class="lock-input" onkeydown="if(event.key==='Enter')setPinAndEnter()">
@@ -1198,7 +1198,6 @@ async function renderLock(){const sec=await getSec();const body=document.getElem
 async function setPinAndEnter(){const pin=(document.getElementById('lockPin').value||'');if(pin.length<4){alert('密码至少 4 位。');return;}
   const salt=b64uFromBuf(crypto.getRandomValues(new Uint8Array(16)));const h=await sha256Hex(salt+pin);
   const sec=await getSec();sec.pinHash=h;sec.pinSalt=salt;await setSec(sec);
-  if(await faceIDSupported()&&confirm('是否启用 Face ID / Touch ID 快速解锁？（之后仍可用密码）'))await enableFaceID();
   doUnlock();}
 async function pinUnlock(){const el=document.getElementById('lockPin');const pin=(el.value||'');const sec=await getSec();
   const h=await sha256Hex((sec.pinSalt||'')+pin);
@@ -1213,14 +1212,21 @@ async function enableFaceID(){
       authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
       timeout:60000,attestation:'none'}});
     const sec=await getSec();sec.webauthnId=b64uFromBuf(cred.rawId);sec.webauthnEnabled=true;await setSec(sec);return true;
-  }catch(e){alert('启用 Face ID 失败：'+(e.message||e));return false;}}
-async function faceIDUnlock(){const sec=await getSec();if(!sec.webauthnEnabled||!sec.webauthnId){alert('尚未启用 Face ID。');return;}
+  }catch(e){const n=(e&&e.name)||'';let msg;
+    if(n==='NotAllowedError')msg='操作被取消或被拒绝。请逐项确认：\n① iPad 已在「设置」里启用 Face ID/Touch ID 且设了锁屏密码；\n② 系统弹出「是否允许此网站使用 Face ID」时点「允许」；\n③ 在「锁定/安全」里直接点「启用 指纹 / Face ID」按钮触发（不要在其它弹窗之后）；\n④ 通过 https 网址（GitHub Pages）访问。\n仍不行可继续用密码解锁。';
+    else if(n==='InvalidStateError')msg='此设备可能已注册过。可先「关闭 指纹 / Face ID」再重新启用。';
+    else if(n==='SecurityError')msg='安全限制：需通过 https 访问，且网址域名与应用一致。';
+    else if(n==='AbortError')msg='验证超时，请重试。';
+    else if(n==='NotSupportedError')msg='此设备不支持所需的生物识别方式。';
+    else msg='启用失败：'+(e.message||n||e);
+    alert(msg);return false;}}
+async function faceIDUnlock(){const sec=await getSec();if(!sec.webauthnEnabled||!sec.webauthnId){alert('尚未启用 指纹 / Face ID。');return;}
   try{await navigator.credentials.get({publicKey:{
       challenge:crypto.getRandomValues(new Uint8Array(32)),
       allowCredentials:[{type:'public-key',id:bufFromB64u(sec.webauthnId)}],
       userVerification:'required',timeout:60000}});
     doUnlock();
-  }catch(e){/* 取消或失败，留在锁屏用密码 */}}
+  }catch(e){const n=(e&&e.name)||'';if(n!=='NotAllowedError'&&n!=='AbortError')alert('指纹 / Face ID 解锁失败：'+(e.message||n||e)+'\n可改用密码解锁。');}}
 async function doUnlock(){document.getElementById('lock').classList.add('hidden');
   document.getElementById('caseCenter').classList.remove('hidden');
   renderFilters();renderCases();await boot();renderFilters();renderCases();maybeShowBackupReminder();
@@ -1250,10 +1256,10 @@ async function openSecurity(){const sec=await getSec();const sup=await faceIDSup
      <div class="field"><label>修改解锁密码</label>
        <input type="password" id="secNew" inputmode="numeric" placeholder="新密码（≥4 位）" style="margin-bottom:8px">
        <input type="password" id="secNew2" inputmode="numeric" placeholder="再次输入新密码"></div>
-     <div class="field"><label>Face ID / Touch ID</label>
+     <div class="field"><label>指纹 / Face ID（生物识别）</label>
        ${sec.webauthnEnabled
-         ?`<div class="row"><span class="muted">已启用</span><span style="flex:1"></span><button class="btn btn-secondary btn-sm" onclick="disableFaceID()">关闭 Face ID</button></div>`
-         :(sup?`<button class="btn btn-secondary btn-sm" onclick="enableFaceIDFromSettings()">启用 Face ID / Touch ID</button>`
+         ?`<div class="row"><span class="muted">已启用</span><span style="flex:1"></span><button class="btn btn-secondary btn-sm" onclick="disableFaceID()">关闭 指纹 / Face ID</button></div>`
+         :(sup?`<button class="btn btn-secondary btn-sm" onclick="enableFaceIDFromSettings()">启用 指纹 / Face ID（Touch ID）</button>`
               :`<div class="tiny">当前环境不支持（需 https 访问，本地 file:// 不可）。部署到 GitHub Pages 后可用。</div>`)}</div>
      <button class="btn btn-secondary btn-sm" onclick="lockNow()">立即锁定</button>
    </div>
@@ -1264,7 +1270,7 @@ async function changePin(){const a=document.getElementById('secNew').value||'',b
   const salt=b64uFromBuf(crypto.getRandomValues(new Uint8Array(16)));const h=await sha256Hex(salt+a);
   const sec=await getSec();sec.pinHash=h;sec.pinSalt=salt;await setSec(sec);alert('密码已更新。');closeModal();}
 async function enableFaceIDFromSettings(){if(await enableFaceID()){alert('Face ID 已启用。');closeModal();}}
-async function disableFaceID(){const sec=await getSec();sec.webauthnEnabled=false;delete sec.webauthnId;await setSec(sec);alert('已关闭 Face ID。');closeModal();}
+async function disableFaceID(){const sec=await getSec();sec.webauthnEnabled=false;delete sec.webauthnId;await setSec(sec);alert('已关闭 指纹 / Face ID。');closeModal();}
 async function resetDemo(){if(!confirm('重置演示会清空当前全部数据并恢复示例，确定？'))return;
   try{await idbClearAll();}catch(e){}cases=seed();uid=1000;try{await persistNow();}catch(e){}renderCases();}
 document.getElementById('langSel').addEventListener('change',renderWB);

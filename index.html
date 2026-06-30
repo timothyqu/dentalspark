@@ -317,11 +317,13 @@ const MOBILITY={none:'不松动',i:'I 度',ii:'II 度',iii:'III 度'};
 function surfaceText(set){const order=['mesial','distal','buccal','lingual','occlusal'];
   return order.filter(s=>set.includes(s)).map(s=>SURFACES[s]).join('、');}
 
+function fdisOf(f){return (f.fdis&&f.fdis.length)?f.fdis:(f.fdi!=null?[f.fdi]:[]);}
+function docTeeth(f){const a=fdisOf(f);return (a.length?a.join('、'):'—')+' 牙';}
+function patTeeth(f){const u=[...new Set(fdisOf(f).map(patientLabel))];return u.join('、')||'相关牙位';}
 function recText(f){if(f.treatment)return tName(f.treatment);return (f.recommendation||'').trim()||'进一步处理';}
-
-function doctorText(f){const tooth=f.fdi+' 牙';const rec=recText(f);
+function doctorText(f){const tooth=docTeeth(f);const rec=recText(f);
   switch(f.problem){
-    case 'caries': case 'defect':{const face=f.surfaces.length?surfaceText(f.surfaces)+'面':'';const name=f.problem==='caries'?'龋坏':'牙体缺损';
+    case 'caries': case 'defect':{const face=f.surfaces&&f.surfaces.length?surfaceText(f.surfaces)+'面':'';const name=f.problem==='caries'?'龋坏':'牙体缺损';
       return `${tooth}${face}${SEV[f.severity]}${name}，建议${rec}。`;}
     case 'restorationFailure': return `${tooth}旧修复体不良，建议${rec}。`;
     case 'perio':{let p=[];if(f.pocket>0)p.push(`牙周袋约 ${f.pocket}mm`);if(f.bleeding)p.push('探诊出血');if(f.mobility&&f.mobility!=='none')p.push('松动 '+MOBILITY[f.mobility]);
@@ -332,17 +334,17 @@ function doctorText(f){const tooth=f.fdi+' 牙';const rec=recText(f);
     case 'malposition': return `${tooth}牙列错位，建议${rec}。`;
     default: return `${tooth}暂无需处理，建议观察随访。`;
   }}
-function patientText(f){const pos=patientLabel(f.fdi);const rec=f.treatment?tPatient(f.treatment):'进一步处理';
+function patientText(f){const pos=patTeeth(f);const multi=fdisOf(f).length>1;const rec=f.treatment?tPatient(f.treatment):'进一步处理';
   switch(f.problem){
-    case 'caries': return `您${pos}有一个${SEV_WORD[f.severity]}蛀牙，建议${rec}，避免继续发展到牙神经引起疼痛。`;
+    case 'caries': return `您${pos}${multi?'这些牙各有':'有一个'}${SEV_WORD[f.severity]}蛀牙，建议${rec}，避免继续发展到牙神经引起疼痛。`;
     case 'defect': return `您${pos}有牙体缺损，建议${rec}，尽早修复以免裂得更大。`;
     case 'restorationFailure': return `您${pos}以前的修复有点问题，建议${rec}，重新做得更稳妥。`;
     case 'perio':{let why='牙龈有炎症';if(f.bleeding)why='刷牙时牙龈容易出血';if(f.mobility&&f.mobility!=='none')why+='、牙齿有点松';
       return `您${pos}周围${why}，建议${rec}，把牙周护理好，牙齿才能用得久。`;}
-    case 'impacted':{const d=f.difficulty?`这颗拔除难度${DIFF_WORD[f.difficulty]}。`:'';
+    case 'impacted':{const d=f.difficulty?`拔除难度${DIFF_WORD[f.difficulty]}。`:'';
       return `您${pos}（智齿）长得不正，容易发炎、还可能蛀坏旁边的牙，建议拔掉。${d}`;}
-    case 'missing': return `您${pos}这里缺了一颗牙，建议${rec}，把咀嚼功能补回来。`;
-    case 'malposition': return `您的牙齿排列不太整齐，建议${rec}，既好看也更好清洁。`;
+    case 'missing': return `您${pos}${multi?'这些位置缺了牙':'这里缺了一颗牙'}，建议${rec}，把咀嚼功能补回来。`;
+    case 'malposition': return `您${pos}排列/形态不够理想，建议${rec}，既好看也更好清洁。`;
     default: return `您${pos}目前问题不大，先观察、定期复查就好。`;
   }}
 function patientDisplay(f){return (f.patientExplanation&&f.patientExplanation.trim())?f.patientExplanation:patientText(f);}
@@ -358,11 +360,28 @@ function stageFor(t){
   return 4;}
 function buildTimeline(c){const bucket={1:[],2:[],3:[],4:[],5:[]};
   c.findings.forEach(f=>{if(!f.treatment||f.treatment==='observation')return;
-    bucket[stageFor(f.treatment)].push({fdi:f.fdi,patient:`${patientLabel(f.fdi)} · ${tPatient(f.treatment)}`});});
+    bucket[stageFor(f.treatment)].push({patient:`${patTeeth(f)} · ${tPatient(f.treatment)}`});});
   const weeks={1:2,2:3,3:12,4:4,5:26};
   return [1,2,3,4,5].map(i=>{const items=bucket[i];
     const visits=i===5?1:(i===3?Math.max(2,items.length*2):Math.max(items.length?1:0,items.length));
     return {index:i,title:STAGE_TITLE[i],items,note:STAGE_NOTE[i],visits,weeks:(items.length||i===5)?weeks[i]:0,active:items.length>0||i===5};});}
+
+/* 价格 / 可编辑治疗计划 */
+function fmtYuan(n){return '¥'+(Number(n)||0).toLocaleString('zh-CN');}
+function priceText(it){const a=+it.priceMin||0,b=+it.priceMax||0;
+  if(!a&&!b)return '价格待定';
+  if(a&&b)return a===b?fmtYuan(a):`${fmtYuan(a)} ~ ${fmtYuan(b)}`;
+  return fmtYuan(a||b)+(a&&!b?' 起':'');}
+function buildAutoPlanItems(c){return c.findings.filter(f=>f.treatment&&f.treatment!=='observation').map(f=>({
+  id:nid(),stage:stageFor(f.treatment),region:docTeeth(f).replace(' 牙',''),title:tName(f.treatment),
+  priceMin:0,priceMax:0,note:'',auto:true,src:f.id}));}
+function ensurePlan(c){if(!c.plan)c.plan=buildAutoPlanItems(c);}
+function refreshAutoPlan(){const manual=cur.plan.filter(it=>!it.auto);
+  const oldAuto={};cur.plan.filter(it=>it.auto).forEach(it=>{oldAuto[it.src]=it;});
+  const auto=buildAutoPlanItems(cur).map(it=>{const o=oldAuto[it.src];if(o){it.priceMin=o.priceMin;it.priceMax=o.priceMax;it.note=o.note;}return it;});
+  cur.plan=[...auto,...manual];flashSave();renderWB();}
+function planTotal(c){let lo=0,hi=0;(c.plan||[]).forEach(it=>{lo+=+it.priceMin||0;hi+=(+it.priceMax|| +it.priceMin||0);});return {lo,hi};}
+function maskPhone(p){p=(p||'').replace(/\D/g,'');if(p.length===11)return p.slice(0,3)+'****'+p.slice(7);if(p.length>4)return p.slice(0,2)+'****'+p.slice(-2);return p||'—';}
 
 /* ============ 数据 ============ */
 const CATS={comprehensive:'综合治疗',implant:'种植',aesthetic:'美学修复',ortho:'正畸',perio:'牙周',pediatric:'儿童牙科'};
@@ -372,19 +391,20 @@ let uid=1; const nid=()=>'id'+(uid++);
 
 function seed(){
   return [
-    {id:nid(),name:'张伟',gender:'男',category:'comprehensive',status:'inProgress',updated:Date.now()-3600e3,
+    {id:nid(),name:'张伟',gender:'男',age:42,phone:'13812345678',recordNo:'MR-20250601-001',chiefComplaint:'右下后牙咬物不适',history:'否认高血压、糖尿病及药物过敏史。',category:'comprehensive',status:'inProgress',updated:Date.now()-3600e3,
       findings:[
-        {id:nid(),fdi:46,problem:'caries',surfaces:['occlusal','distal'],severity:'moderate',treatment:'resinFilling',colorTag:'filling',confirmed:true,patientExplanation:''},
-        {id:nid(),fdi:48,problem:'impacted',surfaces:[],severity:'moderate',treatment:'extraction',colorTag:'extraction',confirmed:false,impaction:'mesial',nerve:'close',difficulty:'medium',patientExplanation:''},
+        {id:nid(),fdis:[46],problem:'caries',surfaces:['occlusal','distal'],severity:'moderate',treatment:'resinFilling',colorTag:'filling',confirmed:true,clinicalNote:'冷测一过性敏感，叩诊(-)。',patientExplanation:''},
+        {id:nid(),fdis:[18,48],problem:'impacted',surfaces:[],severity:'moderate',treatment:'extraction',colorTag:'extraction',confirmed:false,impaction:'mesial',nerve:'close',difficulty:'medium',clinicalNote:'18、48 近中阻生，建议择期拔除。',patientExplanation:''},
       ],assets:[],comparisons:[],reports:[]},
-    {id:nid(),name:'李娜',gender:'女',category:'perio',status:'communicated',updated:Date.now()-8600e3,
-      findings:[{id:nid(),fdi:36,problem:'perio',surfaces:[],severity:'moderate',treatment:'subgingivalCuretage',colorTag:'prevention',confirmed:false,pocket:5,bleeding:true,mobility:'i',patientExplanation:''}],
+    {id:nid(),name:'李娜',gender:'女',age:35,phone:'13987654321',recordNo:'MR-20250603-002',chiefComplaint:'刷牙出血',history:'',category:'perio',status:'communicated',updated:Date.now()-8600e3,
+      findings:[{id:nid(),fdis:[36],problem:'perio',surfaces:[],severity:'moderate',treatment:'subgingivalCuretage',colorTag:'prevention',confirmed:false,pocket:5,bleeding:true,mobility:'i',clinicalNote:'',patientExplanation:''}],
       assets:[],comparisons:[],reports:[]},
-    {id:nid(),name:'王芳',gender:'女',category:'aesthetic',status:'inProgress',updated:Date.now()-100000e3,
-      findings:[],assets:[],comparisons:[],reports:[]},
+    {id:nid(),name:'王芳',gender:'女',age:28,phone:'13700001111',recordNo:'MR-20250605-003',chiefComplaint:'前牙美观',history:'',category:'aesthetic',status:'inProgress',updated:Date.now()-100000e3,
+      findings:[{id:nid(),fdis:[11,21],problem:'malposition',surfaces:[],severity:'mild',treatment:'veneer',colorTag:'aesthetic',confirmed:false,clinicalNote:'',patientExplanation:''}],assets:[],comparisons:[],reports:[]},
   ];}
 let cases=seed();
-let cur=null, view='patient', selTooth=null, tab='tooth';
+let cur=null, view='patient', selTeeth=[], tab='tooth', isAdmin=false;
+const ADMIN_PIN='1234';
 
 /* ============ 渲染：病例中心 ============ */
 let filterCat=null;
@@ -419,7 +439,7 @@ function timeAgo(t){const m=Math.floor((Date.now()-t)/60000);if(m<60)return m+' 
 const TABS=[['info','信息','M4 7h16M4 12h10M4 17h7'],['tooth','牙位','tooth'],['media','影像','M3 7h18v12H3z M3 11l5-3 4 3 4-2 5 4'],['plan','方案','M5 4h14v3H5z M5 10h14v3H5z M5 16h9v3H5z'],['report','报告','M6 3h9l4 4v14H6z M14 3v4h4']];
 function railIcon(d){if(d==='tooth')return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 3c-2 0-3 2-3 4 0 3 1 4 1.5 7C6 16 6 20 8 20s1.5-4 2.5-4 .5 4 2.5 4 2-4 2.5-6C19 11 20 10 20 7c0-2-1-4-3-4-2 0-3 1-5 1S9 3 7 3z"/></svg>`;
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${d}"/></svg>`;}
-function openCase(id){cur=cases.find(c=>c.id===id);selTooth=null;tab='tooth';
+function openCase(id){cur=cases.find(c=>c.id===id);selTeeth=[];tab='tooth';ensurePlan(cur);
   document.getElementById('caseCenter').classList.add('hidden');
   document.getElementById('workbench').classList.remove('hidden');
   document.getElementById('wbTitle').textContent=cur.name+' · '+CATS[cur.category];
@@ -439,24 +459,55 @@ function renderWB(){
   const C=document.getElementById('wbCenter'),P=document.getElementById('wbPanel');
   if(tab==='tooth'){C.innerHTML=toothChartHTML();P.innerHTML=panelHTML();}
   else if(tab==='media'){C.innerHTML=mediaHTML();P.innerHTML=mediaPanelHTML();bindBA();}
-  else if(tab==='plan'){C.innerHTML=planHTML();P.innerHTML='<div class="muted">治疗时间轴根据「牙位」里选择的治疗自动生成。</div>';}
-  else if(tab==='report'){C.innerHTML=reportTabHTML();P.innerHTML='<div class="muted">报告面向患者，先给结论、用通俗语言，含签字与合规声明。</div>';}
-  else {C.innerHTML=infoHTML();P.innerHTML='<div class="muted">患者基础信息与主诉。</div>';}
+  else if(tab==='plan'){ensurePlan(cur);C.innerHTML=planHTML();P.innerHTML=planPanelHTML();}
+  else if(tab==='report'){C.innerHTML=reportTabHTML();P.innerHTML='<div class="muted">报告面向患者，先给结论、用通俗语言，含签字与合规声明，并列出方案的价格区间。</div>';}
+  else {C.innerHTML=infoHTML();P.innerHTML='<div class="muted">患者基础信息、主诉与病史。手机号默认隐藏中间四位，仅管理员可查看完整号码。</div>';}
 }
 
-function infoHTML(){return `<div class="card" style="max-width:560px"><div class="card-body">
-  <h3 style="margin-top:0">患者信息</h3>
-  <div class="row" style="margin-bottom:10px"><div class="avatar" style="background:var(${CAT_COLOR[cur.category]})">${cur.name[0]}</div>
-  <div><div style="font-weight:700;font-size:18px">${cur.name}</div><div class="tiny">${cur.gender} · ${CATS[cur.category]}</div></div></div>
-  <div class="muted">主诉：以演示数据为准。病史、过敏史等字段在 App 完整版中可录入。</div>
-</div>`;}
+function infoRow(k,v){return `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--lightblue)"><div style="width:84px;color:var(--subtle);font-size:13px;flex:none">${k}</div><div style="font-size:14px">${v||'—'}</div></div>`;}
+function infoHTML(){const c=cur;const phoneShown=isAdmin?(c.phone||'—'):maskPhone(c.phone);
+  return `<div class="card" style="max-width:600px"><div class="card-body">
+  <div class="row" style="margin-bottom:14px"><div class="avatar" style="background:var(${CAT_COLOR[c.category]})">${c.name[0]}</div>
+    <div><div style="font-weight:700;font-size:18px">${c.name}</div><div class="tiny">${c.gender}${c.age?' · '+c.age+' 岁':''} · ${CATS[c.category]}</div></div>
+    <span style="flex:1"></span><button class="btn btn-secondary btn-sm" onclick="editInfo()">编辑信息</button></div>
+  ${infoRow('病案号',c.recordNo)}
+  ${infoRow('年龄',c.age?c.age+' 岁':'')}
+  ${infoRow('手机',`${phoneShown} ${isAdmin?'<span class="tiny" style="color:var(--green)">管理员视图</span> <button class="btn-ghost" style="font-size:12px" onclick="adminLock()">隐藏</button>':'<button class="btn-ghost" style="font-size:12px" onclick="adminUnlock()">管理员查看完整号码</button>'}`)}
+  ${infoRow('分类',CATS[c.category])}
+  ${infoRow('主诉',c.chiefComplaint)}
+  ${infoRow('病史 / 备注',c.history)}
+  <div class="tiny" style="margin-top:10px">手机号默认隐藏中间四位（如 138****5678）。完整号码仅管理员在后台可见；正式版应配合账号权限，避免前台/患者侧暴露。</div>
+</div></div>`;}
+function adminUnlock(){const p=prompt('请输入管理员密码以查看完整手机号：','');if(p===null)return;if(p===ADMIN_PIN){isAdmin=true;renderWB();}else alert('密码不正确。');}
+function adminLock(){isAdmin=false;renderWB();}
+function editInfo(){const c=cur;
+  modal(`<div class="modal-hd"><div class="t">编辑患者信息</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>姓名</label><input type="text" id="eiName" value="${c.name||''}"></div>
+     <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>性别</label><select id="eiGender">${['女','男','其他'].map(g=>`<option ${c.gender===g?'selected':''}>${g}</option>`).join('')}</select></div>
+       <div class="field" style="flex:1"><label>年龄</label><input type="text" id="eiAge" value="${c.age||''}" placeholder="岁"></div></div>
+     <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>病案号</label><input type="text" id="eiRec" value="${c.recordNo||''}"></div>
+       <div class="field" style="flex:1"><label>手机</label><input type="text" id="eiPhone" value="${c.phone||''}" placeholder="11 位手机号"></div></div>
+     <div class="field"><label>病例分类</label><select id="eiCat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${c.category===k?'selected':''}>${v}</option>`).join('')}</select></div>
+     <div class="field"><label>主诉</label><input type="text" id="eiCC" value="${c.chiefComplaint||''}"></div>
+     <div class="field"><label>病史 / 备注</label><textarea id="eiHist">${c.history||''}</textarea></div>
+   </div>
+   <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="saveInfo()">保存</button></div>`);}
+function saveInfo(){const c=cur;c.name=document.getElementById('eiName').value.trim()||c.name;
+  c.gender=document.getElementById('eiGender').value;c.age=document.getElementById('eiAge').value.trim();
+  c.recordNo=document.getElementById('eiRec').value.trim();c.phone=document.getElementById('eiPhone').value.trim();
+  c.category=document.getElementById('eiCat').value;c.chiefComplaint=document.getElementById('eiCC').value.trim();
+  c.history=document.getElementById('eiHist').value.trim();
+  document.getElementById('wbTitle').textContent=c.name+' · '+CATS[c.category];
+  flashSave();closeModal();renderWB();}
 
 /* ---- 牙位图 ---- */
-function toothColor(c,fdi){const f=c.findings.find(x=>x.fdi===fdi);return f?f.colorTag:null;}
+function toothColor(c,fdi){const f=c.findings.find(x=>fdisOf(x).includes(fdi));return f?f.colorTag:null;}
 function archHTML(label,arr){return `<div class="arch"><div class="arch-label">${label}</div><div class="teeth">`+
   arr.map(fdi=>{const tag=toothColor(cur,fdi);const fill=tag?cvar(tag):'#fff';
     const white=tag?'#fff':'rgba(144,164,174,.5)';
-    return `<div class="tooth ${selTooth===fdi?'sel':''}" onclick="selectTooth(${fdi})">
+    return `<div class="tooth ${selTeeth.includes(fdi)?'sel':''}" onclick="toggleTooth(${fdi})">
       <div class="crown" style="background:${fill}">
         <svg viewBox="0 0 24 24" fill="${white}"><path d="M7 3c-2 0-3 2-3 4 0 3 1 4 1.5 7C6 16 6 20 8 20s1.5-4 2.5-4 .5 4 2.5 4 2-4 2.5-6C19 11 20 10 20 7c0-2-1-4-3-4-2 0-3 1-5 1S9 3 7 3z"/></svg>
       </div>
@@ -464,42 +515,93 @@ function archHTML(label,arr){return `<div class="arch"><div class="arch-label">$
 function toothChartHTML(){
   const legend=`<div class="legend">`+Object.keys(COLOR_NAME).map(k=>
     `<div class="li"><span class="dot" style="background:${cvar(k)}"></span>${COLOR_NAME[k]}</div>`).join('')+`</div>`;
-  return archHTML('上颌',PERM_UPPER)+archHTML('下颌',PERM_LOWER)+legend;}
-function selectTooth(fdi){selTooth=fdi;renderWB();}
+  const hint=`<div class="muted" style="text-align:center;margin-bottom:10px">点牙位可<strong>多选</strong>：选中 21、22、24 后点「添加问题」，同一处理（如种植）只需记录一次。${selTeeth.length?` 已选 ${selTeeth.length} 颗`:''}</div>`;
+  return hint+archHTML('上颌',PERM_UPPER)+archHTML('下颌',PERM_LOWER)+legend;}
+function toggleTooth(fdi){const i=selTeeth.indexOf(fdi);if(i>=0)selTeeth.splice(i,1);else selTeeth.push(fdi);selTeeth.sort((a,b)=>a-b);renderWB();}
 
 /* ---- 治疗卡片面板 ---- */
 function panelHTML(){
-  if(selTooth===null)return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="1.6"><path d="M12 11v8M9 14l3-3 3 3"/><circle cx="12" cy="6" r="2"/></svg><div>点击牙位查看 / 添加</div></div>`;
-  const fs=cur.findings.filter(f=>f.fdi===selTooth);
-  const title=view==='doctor'?`牙位 ${selTooth}`:patientLabel(selTooth);
+  if(!selTeeth.length)return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="#90A4AE" stroke-width="1.6"><path d="M12 11v8M9 14l3-3 3 3"/><circle cx="12" cy="6" r="2"/></svg><div>点牙位查看 / 添加（可多选）</div></div>`;
+  const fs=cur.findings.filter(f=>fdisOf(f).some(x=>selTeeth.includes(x)));
+  const title=view==='doctor'?selTeeth.join('、')+' 牙':[...new Set(selTeeth.map(patientLabel))].join('、');
   let html=`<div style="font-weight:700;font-size:16px;margin-bottom:4px">治疗卡片</div>
-    <div style="color:var(--blue);font-weight:600;margin-bottom:10px">${title}</div>`;
-  if(!fs.length)html+=`<div class="muted" style="margin-bottom:10px">尚无标记，点下方添加。</div>`;
+    <div style="color:var(--blue);font-weight:600;margin-bottom:10px">已选：${title}</div>`;
+  if(!fs.length)html+=`<div class="muted" style="margin-bottom:10px">所选牙位尚无标记，点下方为这 ${selTeeth.length} 颗牙一次性添加。</div>`;
   else fs.forEach(f=>{const txt=view==='doctor'?doctorText(f):patientDisplay(f);
     html+=`<div class="card card-accent" style="margin-bottom:8px;cursor:pointer" onclick="editFinding('${f.id}')">
       <div class="bar" style="background:${cvar(f.colorTag)}"></div>
       <div class="card-body" style="padding:12px">
-        <div class="row"><b>${PROBLEMS[f.problem]}</b>${f.treatment?`<span class="tiny">· ${tName(f.treatment)}</span>`:''}<span style="flex:1"></span><span class="tiny">›</span></div>
+        <div class="row"><b>${PROBLEMS[f.problem]}</b>${f.treatment?`<span class="tiny">· ${tName(f.treatment)}</span>`:''}<span style="flex:1"></span><span class="tiny">${fdisOf(f).join('、')} ›</span></div>
         <div class="muted" style="margin:4px 0">${txt}</div>
+        ${f.clinicalNote?`<div class="tiny" style="color:var(--subtle)">病史/检查：${f.clinicalNote}</div>`:''}
         <div style="font-size:12px;color:${f.confirmed?'var(--green)':'var(--orange)'}">${f.confirmed?'✓ 已确认':'⚠ 待医生确认'}</div>
       </div></div>`;});
-  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addFinding()">＋ 添加问题</button>`;
-  if(fs.length)html+=`<button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="clearTooth()">清除该牙</button>`;
+  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addFinding()">＋ 添加问题（${selTeeth.length} 颗）</button>`;
+  html+=`<button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="selTeeth=[];renderWB()">清除选择</button>`;
   return html;}
-function clearTooth(){cur.findings=cur.findings.filter(f=>f.fdi!==selTooth);flashSave();renderWB();}
 
 /* ---- 时间轴 ---- */
 function renderTimelineBar(){const plan=buildTimeline(cur);
   document.getElementById('timelineBar').innerHTML=plan.map(s=>
     `<span class="tl-pill ${s.active?'on':''}">${s.title}</span>`).join('')+
     `<span style="flex:1"></span><span class="tiny">点「方案」看完整时间轴</span>`;}
-function planHTML(){const plan=buildTimeline(cur).filter(s=>s.active);
-  if(buildTimeline(cur).every(s=>!s.items.length))return `<div class="empty">先在「牙位」标记问题并选择治疗，这里会自动生成阶段计划。</div>`;
-  return `<h3 style="margin-top:0">治疗计划时间轴</h3><div class="muted" style="margin-bottom:14px">依据已标记问题自动编排，次数与周期为估算，以面诊为准。</div>`+
-    plan.map(s=>`<div class="card card-accent" style="margin-bottom:10px"><div class="bar" style="background:var(--blue)"></div>
-      <div class="card-body"><div class="row"><b>${s.title}</b><span style="flex:1"></span>${s.items.length?`<span class="tiny">约 ${s.visits} 次 · ${s.weeks} 周</span>`:''}</div>
-      ${s.items.length?s.items.map(i=>`<div class="muted">· ${i.patient}</div>`).join(''):`<div class="muted">${s.note}</div>`}
-      </div></div>`).join('');}
+function planPanelHTML(){const t=planTotal(cur);
+  return `<div style="font-weight:700;margin-bottom:10px">方案操作</div>
+    <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px" onclick="addPlanItem()">＋ 添加项目</button>
+    <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px" onclick="refreshAutoPlan()">↻ 按标记问题刷新自动项</button>
+    <div class="card" style="margin-top:8px"><div class="card-body" style="padding:12px">
+      <div class="tiny">费用区间合计</div>
+      <div style="font-weight:800;font-size:18px;color:var(--deep)">${t.lo||t.hi?`${fmtYuan(t.lo)} ~ ${fmtYuan(t.hi)}`:'待定'}</div>
+      <div class="tiny" style="margin-top:4px">报告中会向患者展示分项与合计价格区间，便于选择与考虑。</div>
+    </div></div>
+    <div class="muted" style="margin-top:10px">自动项来自「牙位」里标记的治疗；可手动新增（如 24 植骨、钛网）、改价、删改。</div>`;}
+function planHTML(){ensurePlan(cur);const items=cur.plan;
+  if(!items.length)return `<div class="empty">还没有方案项目。右侧「添加项目」手动添加，或在「牙位」标记治疗后「刷新自动项」。</div>`;
+  const t=planTotal(cur);
+  let html=`<div class="row" style="margin-bottom:6px"><h3 style="margin:0">治疗方案</h3><span style="flex:1"></span>
+    <span class="chip" style="background:var(--lightblue);color:var(--deep)">合计 ${t.lo||t.hi?`${fmtYuan(t.lo)} ~ ${fmtYuan(t.hi)}`:'待定'}</span></div>
+    <div class="muted" style="margin-bottom:14px">按阶段编排；价格为区间估算，最终以面诊与知情同意为准。</div>`;
+  [1,2,3,4,5].forEach(stage=>{const list=items.filter(it=>it.stage===stage);if(!list.length)return;
+    html+=`<div class="card card-accent" style="margin-bottom:10px"><div class="bar" style="background:var(--blue)"></div>
+      <div class="card-body"><div class="row" style="margin-bottom:6px"><b>${STAGE_TITLE[stage]}</b></div>`+
+      list.map(it=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--lightblue)">
+        <div style="flex:1">
+          <div><b style="font-size:14px">${it.title}</b> ${it.region?`<span class="tiny">· ${it.region} 牙</span>`:''} ${it.auto?'<span class="tiny" style="color:var(--gray)">自动</span>':'<span class="tiny" style="color:var(--teal)">手动</span>'}</div>
+          ${it.note?`<div class="tiny">${it.note}</div>`:''}
+        </div>
+        <div style="text-align:right"><div style="font-weight:700;color:var(--deep)">${priceText(it)}</div>
+          <button class="btn-ghost" style="font-size:12px" onclick="editPlanItem('${it.id}')">改</button>
+          <button class="btn-danger" style="font-size:12px;background:none" onclick="delPlanItem('${it.id}')">删</button></div>
+      </div>`).join('')+`</div></div>`;});
+  return html;}
+let planDraft=null,planEditId=null;
+function addPlanItem(){planEditId=null;planDraft={id:nid(),stage:1,region:selTeeth.join('、'),title:'',priceMin:0,priceMax:0,note:'',auto:false};renderPlanItemEditor();}
+function editPlanItem(id){planEditId=id;planDraft=JSON.parse(JSON.stringify(cur.plan.find(it=>it.id===id)));renderPlanItemEditor();}
+function renderPlanItemEditor(){const it=planDraft;
+  modal(`<div class="modal-hd"><div class="t">${planEditId?'编辑':'添加'}方案项目</div></div>
+   <div class="modal-bd">
+     <div class="field"><label>项目名称</label><input type="text" id="piTitle" value="${it.title||''}" placeholder="如 上颌窦提升植骨、钛网、种植体、全锆冠"></div>
+     <div style="display:flex;gap:12px">
+       <div class="field" style="flex:1"><label>阶段</label><select id="piStage">${[1,2,3,4,5].map(s=>`<option value="${s}" ${it.stage===s?'selected':''}>${STAGE_TITLE[s]}</option>`).join('')}</select></div>
+       <div class="field" style="flex:1"><label>牙位 / 部位</label><input type="text" id="piRegion" value="${it.region||''}" placeholder="如 24"></div>
+     </div>
+     <div style="display:flex;gap:12px">
+       <div class="field" style="flex:1"><label>价格下限（元）</label><input type="text" id="piMin" value="${it.priceMin||''}" placeholder="如 3000"></div>
+       <div class="field" style="flex:1"><label>价格上限（元）</label><input type="text" id="piMax" value="${it.priceMax||''}" placeholder="如 5000"></div>
+     </div>
+     <div class="field"><label>备注（患者可见，选填）</label><textarea id="piNote" placeholder="如 含基台与牙冠；具体以面诊为准">${it.note||''}</textarea></div>
+   </div>
+   <div class="modal-ft">${planEditId?`<button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="delPlanItem('${it.id}')">删除</button>`:''}
+     <button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary btn-sm" onclick="savePlanItem()">保存</button></div>`);}
+function savePlanItem(){const it=planDraft;
+  it.title=document.getElementById('piTitle').value.trim()||'未命名项目';
+  it.stage=+document.getElementById('piStage').value;it.region=document.getElementById('piRegion').value.trim();
+  it.priceMin=parseInt(document.getElementById('piMin').value)||0;it.priceMax=parseInt(document.getElementById('piMax').value)||0;
+  it.note=document.getElementById('piNote').value.trim();
+  const i=cur.plan.findIndex(x=>x.id===it.id);if(i>=0)cur.plan[i]=it;else cur.plan.push(it);
+  flashSave();closeModal();renderWB();}
+function delPlanItem(id){cur.plan=cur.plan.filter(it=>it.id!==id);flashSave();closeModal();renderWB();}
 
 /* ============ 影像 ============ */
 let mediaMode='photos';
@@ -795,20 +897,28 @@ function openNewCase(){
   modal(`<div class="modal-hd"><div class="t">新建病例</div></div>
    <div class="modal-bd">
      <div class="field"><label>患者姓名</label><input type="text" id="ncName" placeholder="患者姓名"></div>
-     <div class="field"><label>性别</label><select id="ncGender"><option>女</option><option>男</option><option>其他</option></select></div>
+     <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>性别</label><select id="ncGender"><option>女</option><option>男</option><option>其他</option></select></div>
+       <div class="field" style="flex:1"><label>年龄</label><input type="text" id="ncAge" placeholder="岁"></div></div>
+     <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>病案号（留空自动生成）</label><input type="text" id="ncRec" placeholder="MR-…"></div>
+       <div class="field" style="flex:1"><label>手机</label><input type="text" id="ncPhone" placeholder="11 位手机号"></div></div>
      <div class="field"><label>病例分类</label><select id="ncCat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
    </div>
    <div class="modal-ft"><button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
      <button class="btn btn-primary btn-sm" onclick="createCase()">创建</button></div>`);}
+function genRecordNo(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return `MR-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${('000'+(cases.length+1)).slice(-3)}`;}
 function createCase(){const name=document.getElementById('ncName').value.trim()||'新患者';
-  const c={id:nid(),name,gender:document.getElementById('ncGender').value,category:document.getElementById('ncCat').value,
-    status:'inProgress',updated:Date.now(),findings:[],assets:[],comparisons:[],reports:[]};
+  const c={id:nid(),name,gender:document.getElementById('ncGender').value,age:document.getElementById('ncAge').value.trim(),
+    phone:document.getElementById('ncPhone').value.trim(),recordNo:document.getElementById('ncRec').value.trim()||genRecordNo(),
+    chiefComplaint:'',history:'',category:document.getElementById('ncCat').value,
+    status:'inProgress',updated:Date.now(),findings:[],assets:[],comparisons:[],reports:[],plan:[]};
   cases.unshift(c);closeModal();renderCases();}
 
 /* finding editor */
 let editId=null;
-function addFinding(){editId=null;openFindingEditor({id:nid(),fdi:selTooth,problem:'caries',surfaces:[],severity:'moderate',
-  treatment:optionsFor('caries')[1],colorTag:'filling',confirmed:false,pocket:0,bleeding:false,mobility:'none',patientExplanation:''});}
+function addFinding(){editId=null;
+  if(!selTeeth.length){alert('请先在牙位图选择至少一颗牙。');return;}
+  openFindingEditor({id:nid(),fdis:[...selTeeth],problem:'caries',surfaces:[],severity:'moderate',
+    treatment:optionsFor('caries')[1],colorTag:'filling',confirmed:false,pocket:0,bleeding:false,mobility:'none',clinicalNote:'',patientExplanation:''});}
 function editFinding(id){editId=id;openFindingEditor(JSON.parse(JSON.stringify(cur.findings.find(f=>f.id===id))));}
 let draft=null;
 function openFindingEditor(f){draft=f;renderFindingEditor();}
@@ -830,11 +940,15 @@ function renderFindingEditor(){const f=draft;const opts=optionsFor(f.problem);
       <div class="field"><label>神经管 / 上颌窦关系</label>${sel(NERVE,'nerve',f.nerve)}</div>
       <div class="field"><label>拔除难度</label>${sel(DIFF,'difficulty',f.difficulty)}</div>`;
   }
-  modal(`<div class="modal-hd"><div class="t">${f.fdi} 牙 · 治疗卡片</div></div>
+  const chips=fdisOf(f).map(n=>`<span class="chip" style="height:28px;font-size:12px;background:var(--lightblue)">${n} 牙 <span style="cursor:pointer;color:var(--red);margin-left:4px" onclick="removeFdi(${n})">×</span></span>`).join(' ');
+  modal(`<div class="modal-hd"><div class="t">治疗卡片 · ${fdisOf(f).join('、')} 牙</div></div>
    <div class="modal-bd">
+     <div class="field"><label>适用牙位（同一处理可含多颗）</label><div style="display:flex;gap:6px;flex-wrap:wrap">${chips||'<span class="tiny">无</span>'}</div>
+       <div class="tiny" style="margin-top:4px">如需增减牙位：关闭后在牙位图调整选择再添加；编辑时可在此移除。</div></div>
      <div class="field"><label>问题类型</label><select onchange="draft.problem=this.value;renderFindingEditor()">${Object.entries(PROBLEMS).map(([k,v])=>`<option value="${k}" ${f.problem===k?'selected':''}>${v}</option>`).join('')}</select></div>
      ${detail}
      <div class="field"><label>治疗建议（建议范围，由医生确认）</label><select onchange="draft.treatment=this.value;renderFindingEditor()">${opts.map(t=>`<option value="${t}" ${f.treatment===t?'selected':''}>${tName(t)}</option>`).join('')}</select></div>
+     <div class="field"><label>病史 / 检查记录（手动录入）</label><textarea oninput="draft.clinicalNote=this.value" placeholder="如：冷测一过性敏感，叩诊(-)，X 线示近髓；既往糖尿病史等">${f.clinicalNote||''}</textarea></div>
      <div class="field"><label class="toggle"><input type="checkbox" ${f.confirmed?'checked':''} onchange="draft.confirmed=this.checked"> 医生已确认</label></div>
      <div class="field"><label>沟通预览</label>
        <div class="preview-line"><div class="k">医生语言</div>${doctorText(f)}</div>
@@ -846,6 +960,7 @@ function renderFindingEditor(){const f=draft;const opts=optionsFor(f.problem);
      ${editId?`<button class="btn btn-danger btn-sm" style="margin-right:auto" onclick="deleteFinding()">删除</button>`:''}
      <button class="btn btn-secondary btn-sm" onclick="closeModal()">取消</button>
      <button class="btn btn-primary btn-sm" onclick="saveFinding()">保存</button></div>`);}
+function removeFdi(n){draft.fdis=fdisOf(draft).filter(x=>x!==n);if(!draft.fdis.length){alert('至少保留一颗牙。');draft.fdis=[n];}renderFindingEditor();}
 function toggleSurface(k){const i=draft.surfaces.indexOf(k);if(i>=0)draft.surfaces.splice(i,1);else draft.surfaces.push(k);renderFindingEditor();}
 function saveFinding(){const i=cur.findings.findIndex(f=>f.id===draft.id);
   if(i>=0)cur.findings[i]=draft;else cur.findings.push(draft);flashSave();closeModal();renderWB();}
@@ -893,7 +1008,8 @@ function openReport(){sigPatient=null;sigDoctor=null;reportRedact=false;
   const problems=cur.findings.map(f=>({txt:patientDisplay(f),hex:cvar(f.colorTag),confirmed:f.confirmed}));
   const imgs=cur.assets.filter(a=>a.includeInReport);
   const cmps=cur.comparisons.filter(p=>p.includeInReport).map(p=>({...p,b:cur.assets.find(a=>a.id===p.before),a:cur.assets.find(a=>a.id===p.after)})).filter(p=>p.b&&p.a);
-  const plan=buildTimeline(cur).filter(s=>s.active);
+  ensurePlan(cur);const pt=planTotal(cur);
+  const planStages=[1,2,3,4,5].map(s=>({s,list:cur.plan.filter(it=>it.stage===s)})).filter(x=>x.list.length);
   modal(`<div class="modal-hd"><div class="t">生成沟通报告</div><span style="flex:1"></span></div>
    <div class="modal-bd">
      <div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--blue)"></div><div class="card-body">
@@ -901,6 +1017,11 @@ function openReport(){sigPatient=null;sigDoctor=null;reportRedact=false;
        <div style="font-weight:600;color:var(--blue);margin:6px 0">${cur.name}${reportRedact?'':` · ${cur.gender}`}</div>
        <div style="font-weight:600;margin-top:6px">口腔现状总览</div>
        ${problems.length?problems.map(p=>`<div class="rb-li"><span class="dot" style="background:${p.hex};margin-top:4px"></span><span>${p.txt}${p.confirmed?'':'（待医生确认）'}</span></div>`).join(''):'<div class="muted">未标记需处理的问题。</div>'}
+     </div></div>
+     <div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--teal)"></div><div class="card-body">
+       <div class="row"><b>治疗方案与费用区间</b><span style="flex:1"></span><span class="chip" style="background:var(--lightblue);color:var(--deep)">合计 ${pt.lo||pt.hi?`${fmtYuan(pt.lo)} ~ ${fmtYuan(pt.hi)}`:'待定'}</span></div>
+       ${planStages.length?planStages.map(x=>`<div style="margin-top:6px"><div class="tiny" style="font-weight:700;color:var(--deep)">${STAGE_TITLE[x.s]}</div>
+         ${x.list.map(it=>`<div class="rb-li"><span>· ${it.title}${it.region?'（'+it.region+'）':''}</span><span style="flex:1"></span><span style="color:var(--deep)">${priceText(it)}</span></div>`).join('')}</div>`).join(''):'<div class="muted">暂无方案项目，可在「方案」页添加。</div>'}
      </div></div>
      ${imgs.length?`<div class="card card-accent" style="margin-bottom:14px"><div class="bar" style="background:var(--purple)"></div><div class="card-body"><b>影像与照片（${imgs.length} 张）</b>
        <div class="rb-imgs" style="margin-top:8px">${imgs.map(a=>`<img src="${a.annotated||a.src}">`).join('')}</div></div></div>`:''}
@@ -937,16 +1058,21 @@ function showReportDoc(id){const r=cur.reports.find(x=>x.id===id);
   const problems=cur.findings.map(f=>({txt:patientDisplay(f),hex:cvar(f.colorTag),confirmed:f.confirmed}));
   const imgs=cur.assets.filter(a=>a.includeInReport);
   const cmps=cur.comparisons.filter(p=>p.includeInReport).map(p=>({...p,b:cur.assets.find(a=>a.id===p.before),a:cur.assets.find(a=>a.id===p.after)})).filter(p=>p.b&&p.a);
-  const plan=buildTimeline(cur).filter(s=>s.active);
+  ensurePlan(cur);const pt=planTotal(cur);
+  const planStages=[1,2,3,4,5].map(s=>({s,list:cur.plan.filter(it=>it.stage===s)})).filter(x=>x.list.length);
   const doc=`<div class="report-doc">
     <div class="rb-banner"><div class="clinic">DentalSpark 口腔诊所</div><div class="h">口腔治疗沟通报告</div>
-      <div style="opacity:.9">${cur.name}${r.redact?'（已隐藏敏感信息）':'  '+cur.gender}</div></div>
-    <div class="rb-sec" style="padding-top:14px"><div class="muted">生成日期：${new Date(r.at).toLocaleDateString('zh-CN')}　主诊医生：主诊医生</div></div>
+      <div style="opacity:.9">${cur.name}${r.redact?'（已隐藏敏感信息）':'  '+cur.gender+(cur.age?' · '+cur.age+' 岁':'')}</div></div>
+    <div class="rb-sec" style="padding-top:14px"><div class="muted">生成日期：${new Date(r.at).toLocaleDateString('zh-CN')}　主诊医生：主诊医生${r.redact?'':'　病案号：'+(cur.recordNo||'—')}</div>${cur.chiefComplaint?`<div class="muted">主诉：${cur.chiefComplaint}</div>`:''}</div>
     <div class="rb-sec"><h3>口腔现状总览</h3>
       ${problems.length?problems.map(p=>`<div class="rb-li"><span class="dot" style="background:${p.hex};margin-top:4px"></span><span>${p.txt}${p.confirmed?'':'（待医生确认）'}</span></div>`).join(''):'<div class="muted">未标记需处理的问题。</div>'}</div>
     ${imgs.length?`<div class="rb-sec"><h3>影像与照片</h3><div class="rb-imgs">${imgs.map(a=>`<div><img src="${a.annotated||a.src}"><div class="tiny" style="width:160px">${sourceLabel(a)}：${assetCap(a)}</div></div>`).join('')}</div></div>`:''}
     ${cmps.length?`<div class="rb-sec"><h3>术前 / 术后对比</h3>${cmps.map(p=>`<div><b style="font-size:13px">${p.title}</b><div class="rb-cmp"><figure><img src="${p.b.src}"><figcaption>术前</figcaption></figure><figure><img src="${p.a.src}"><figcaption>${p.simulation?'术后（模拟）':'术后'}</figcaption></figure></div>${p.caption?`<div class="tiny">${p.caption}${p.simulation?'（术后为效果模拟）':''}</div>`:''}</div>`).join('')}</div>`:''}
-    ${plan.length?`<div class="rb-sec"><h3>治疗计划时间轴（估算，以面诊为准）</h3>${plan.map(s=>`<div style="margin:6px 0"><b style="font-size:13px">${s.title}</b>${s.items.length?s.items.map(i=>`<div class="rb-li"><span>· ${i.patient}</span></div>`).join('')+`<div class="tiny">预计 ${s.visits} 次 · 约 ${s.weeks} 周</div>`:`<div class="muted">${s.note}</div>`}</div>`).join('')}</div>`:''}
+    ${planStages.length?`<div class="rb-sec"><h3>治疗方案与费用区间</h3>
+      ${planStages.map(x=>`<div style="margin:6px 0"><b style="font-size:13px">${STAGE_TITLE[x.s]}</b>
+        ${x.list.map(it=>`<div class="rb-li"><span style="flex:1">· ${it.title}${it.region?'（'+it.region+' 牙）':''}${it.note?'　'+it.note:''}</span><span style="font-weight:700;color:var(--deep)">${priceText(it)}</span></div>`).join('')}</div>`).join('')}
+      <div class="rb-li" style="border-top:2px solid var(--lightblue);margin-top:8px;padding-top:8px"><span style="flex:1;font-weight:700">费用区间合计</span><span style="font-weight:800;color:var(--deep)">${pt.lo||pt.hi?`${fmtYuan(pt.lo)} ~ ${fmtYuan(pt.hi)}`:'待定'}</span></div>
+      <div class="tiny">价格为区间估算，便于您选择与考虑；最终费用以面诊及知情同意书为准。</div></div>`:''}
     <div class="rb-sec"><h3>风险提示与术后医嘱</h3>
       <div class="rb-li"><span>· 未及时治疗可能导致病情进展；具体风险、效果与费用以面诊及知情同意书为准。</span></div>
       <div class="rb-li"><span>· 保持口腔卫生、按医嘱复诊，出现明显不适及时联系诊所。</span></div></div>
